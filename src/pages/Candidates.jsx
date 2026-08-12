@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useAuth } from '../context/AuthContext'
-import { listenCandidates, saveCandidate, deleteCandidate } from '../lib/data'
+import { listenCandidates, saveCandidate, deleteCandidate, importCandidates } from '../lib/data'
+import { CANDIDATES_SEED } from '../lib/candidatesSeed'
 import CandidateCard from '../components/CandidateCard'
 
 const emptyForm = { number: '', name: '', province: '', photoUrl: '', bio: '', status: 'active' }
@@ -11,6 +12,7 @@ export default function Candidates({ embedded = false }) {
   const [editing, setEditing] = useState(null) // candidate id or 'new'
   const [form, setForm] = useState(emptyForm)
   const [saving, setSaving] = useState(false)
+  const [importing, setImporting] = useState(false)
 
   useEffect(() => listenCandidates(setCandidates), [])
 
@@ -52,6 +54,21 @@ export default function Candidates({ embedded = false }) {
     await deleteCandidate(id)
   }
 
+  async function handleImport() {
+    if (
+      !confirm(
+        `Esto va a crear ${CANDIDATES_SEED.length} candidatas oficiales (sin foto, la agregas después editando cada una). ¿Continuar?`,
+      )
+    )
+      return
+    setImporting(true)
+    try {
+      await importCandidates(CANDIDATES_SEED, { uid: profile.id, name: profile.name })
+    } finally {
+      setImporting(false)
+    }
+  }
+
   return (
     <div className={embedded ? '' : 'container'}>
       <div className="flex-between">
@@ -67,9 +84,16 @@ export default function Candidates({ embedded = false }) {
           <p className="text-dim">{candidates.length} de 26 candidatas cargadas</p>
         )}
         {canManageCandidates && (
-          <button className="btn btn-primary" onClick={startNew}>
-            + Agregar candidata
-          </button>
+          <div className="flex gap-8">
+            {candidates.length === 0 && (
+              <button className="btn" disabled={importing} onClick={handleImport}>
+                {importing ? 'Importando...' : `Importar candidatas oficiales (${CANDIDATES_SEED.length})`}
+              </button>
+            )}
+            <button className="btn btn-primary" onClick={startNew}>
+              + Agregar candidata
+            </button>
+          </div>
         )}
       </div>
 
