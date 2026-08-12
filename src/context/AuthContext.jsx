@@ -1,12 +1,5 @@
 import { createContext, useContext, useEffect, useState } from 'react'
-import {
-  onAuthStateChanged,
-  signInWithEmailAndPassword,
-  createUserWithEmailAndPassword,
-  signInWithPopup,
-  signOut,
-  updateProfile,
-} from 'firebase/auth'
+import { onAuthStateChanged, signInWithPopup, signOut } from 'firebase/auth'
 import { doc, getDoc, setDoc, onSnapshot, serverTimestamp } from 'firebase/firestore'
 import { auth, db, googleProvider } from '../firebase'
 import { ROLES } from '../lib/constants'
@@ -56,16 +49,6 @@ export function AuthProvider({ children }) {
     }
   }
 
-  async function login(email, password) {
-    await signInWithEmailAndPassword(auth, email, password)
-  }
-
-  async function register(name, email, password) {
-    const cred = await createUserWithEmailAndPassword(auth, email, password)
-    if (name) await updateProfile(cred.user, { displayName: name })
-    await ensureUserDoc({ ...cred.user, displayName: name })
-  }
-
   async function loginWithGoogle() {
     const cred = await signInWithPopup(auth, googleProvider)
     await ensureUserDoc(cred.user)
@@ -82,8 +65,6 @@ export function AuthProvider({ children }) {
     isAdmin: profile?.role === ROLES.ADMIN,
     isColaborador: profile?.role === ROLES.COLABORADOR,
     canManageCandidates: profile?.role === ROLES.ADMIN || profile?.role === ROLES.COLABORADOR,
-    login,
-    register,
     loginWithGoogle,
     logout,
   }
