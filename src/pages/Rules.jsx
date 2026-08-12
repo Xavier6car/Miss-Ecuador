@@ -2,7 +2,7 @@ export default function Rules() {
   return (
     <div className="container">
       <h1 className="page-title">Reglas</h1>
-      <p className="page-subtitle">Cómo funciona la Polla Miss Ecuador.</p>
+      <p className="page-subtitle">Cómo funciona la Polla Miss Universo Ecuador.</p>
 
       <div className="card" style={{ marginBottom: 16 }}>
         <h3>Fases</h3>

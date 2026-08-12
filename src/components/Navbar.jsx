@@ -9,7 +9,7 @@ export default function Navbar() {
       <div className="navbar-inner">
         <NavLink to="/" className="brand">
           <span className="brand-badge">ME</span>
-          Polla Miss Ecuador
+          Polla Miss Universo Ecuador
         </NavLink>
         <nav className="nav-links">
           <NavLink to="/candidatas" className={({ isActive }) => `nav-link${isActive ? ' active' : ''}`}>

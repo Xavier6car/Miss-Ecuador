@@ -32,7 +32,7 @@ function AppLayout() {
 
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
-      <p className="footer-note">Polla Miss Ecuador · hecho con React + Firebase</p>
+      <p className="footer-note">Polla Miss Universo Ecuador · hecho con React + Firebase</p>
     </div>
   )
 }

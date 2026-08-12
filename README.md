@@ -1,6 +1,6 @@
-# Polla Miss Ecuador
+# Polla Miss Universo Ecuador
 
-App web de predicciones por eliminación de fases para el certamen Miss Ecuador.
+App web de predicciones por eliminación de fases para el certamen Miss Universo Ecuador.
 Cada participante predice quiénes avanzan en cada corte (Top 15 → Top 10 → Top 5
 → Podio) y va sumando puntos a medida que el administrador publica los
 resultados oficiales.

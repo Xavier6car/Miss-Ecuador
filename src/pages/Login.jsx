@@ -33,7 +33,7 @@ export default function Login() {
           <div className="brand-badge" style={{ margin: '0 auto 10px' }}>
             ME
           </div>
-          <h1 style={{ fontSize: 22 }}>Polla Miss Ecuador</h1>
+          <h1 style={{ fontSize: 22 }}>Polla Miss Universo Ecuador</h1>
           <p className="text-dim" style={{ margin: 0 }}>Ingresa con tu cuenta de Google</p>
         </div>
 

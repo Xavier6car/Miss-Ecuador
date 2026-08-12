@@ -7,6 +7,7 @@ import {
   listenPhaseResults,
   setPhaseConfig,
   publishPhaseResultsAndRecalculate,
+  ensurePhaseDocs,
 } from '../../lib/data'
 import CandidateCard from '../../components/CandidateCard'
 
@@ -15,6 +16,11 @@ export default function AdminPhases() {
   const [phases, setPhases] = useState({})
   const [results, setResults] = useState({})
 
+  // Crea los documentos de fase la primera vez (si todavía no existen),
+  // para que "Abrir fase" siempre tenga sobre qué escribir.
+  useEffect(() => {
+    ensurePhaseDocs().catch(() => {})
+  }, [])
   useEffect(() => listenCandidates(setCandidates), [])
   useEffect(() => listenPhases((key, data) => setPhases((prev) => ({ ...prev, [key]: data }))), [])
   useEffect(() => {
@@ -22,8 +28,28 @@ export default function AdminPhases() {
     return () => unsubs.forEach((u) => u())
   }, [])
 
+  const activePhases = PHASES.filter((p) => phases[p.key]?.status === PHASE_STATUS.ABIERTA)
+
   return (
     <div>
+      <div className="card" style={{ marginBottom: 20 }}>
+        <h3 style={{ marginBottom: 8 }}>Fase activa</h3>
+        {activePhases.length === 0 ? (
+          <p className="text-dim" style={{ margin: 0 }}>
+            Ninguna fase está abierta ahora mismo — los usuarios no pueden elegir candidatas en
+            ninguna fase. Abre una fase abajo para habilitar las predicciones.
+          </p>
+        ) : (
+          <div className="flex gap-8" style={{ flexWrap: 'wrap' }}>
+            {activePhases.map((p) => (
+              <span key={p.key} className="badge badge-open">
+                {p.shortLabel} · {p.label}
+              </span>
+            ))}
+          </div>
+        )}
+      </div>
+
       {PHASES.map((phase) => (
         <PhaseAdminCard
           key={phase.key}
