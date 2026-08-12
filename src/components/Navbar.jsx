@@ -1,22 +1,33 @@
 import { NavLink } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
+import { useActivePhase } from '../hooks/useActivePhase'
+import { useMyRank } from '../hooks/useMyRank'
 
 export default function Navbar() {
   const { profile, canManageCandidates, isAdmin, logout } = useAuth()
+  const { activePhaseKey } = useActivePhase()
+  const { rank, total, totalPoints } = useMyRank()
 
   return (
     <header className="navbar">
       <div className="navbar-inner">
         <NavLink to="/" className="brand">
           <span className="brand-badge">ME</span>
-          Miss Universo Ecuador
+          <span className="brand-title">Miss Universo Ecuador</span>
+          <span className="brand-subtitle">Predicciones</span>
         </NavLink>
         <nav className="nav-links">
+          <NavLink to="/" end className={({ isActive }) => `nav-link${isActive ? ' active' : ''}`}>
+            Inicio
+          </NavLink>
           <NavLink to="/candidatas" className={({ isActive }) => `nav-link${isActive ? ' active' : ''}`}>
             Candidatas
           </NavLink>
-          <NavLink to="/prediccion/phase1" className={({ isActive }) => `nav-link${isActive ? ' active' : ''}`}>
-            Mis predicciones
+          <NavLink
+            to={`/prediccion/${activePhaseKey}`}
+            className={({ isActive }) => `nav-link${isActive ? ' active' : ''}`}
+          >
+            Predicción
           </NavLink>
           <NavLink to="/ranking" className={({ isActive }) => `nav-link${isActive ? ' active' : ''}`}>
             Ranking
@@ -32,8 +43,15 @@ export default function Navbar() {
         </nav>
         {profile && (
           <div className="nav-user">
-            <span>{profile.name}</span>
-            <span className="role-pill">{profile.role}</span>
+            <span className="stat-pill">
+              <strong>{totalPoints.toLocaleString('es-EC')}</strong> pts
+              {rank && total > 0 && (
+                <>
+                  {' '}
+                  · #{rank} de {total}
+                </>
+              )}
+            </span>
             <button className="btn btn-sm" onClick={logout}>
               Salir
             </button>

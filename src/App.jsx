@@ -2,6 +2,8 @@ import { HashRouter, Routes, Route, Navigate } from 'react-router-dom'
 import { AuthProvider, useAuth } from './context/AuthContext'
 import { RequireAuth, RequireRole, FullPageSpinner } from './components/Guards'
 import Navbar from './components/Navbar'
+import BottomNav from './components/BottomNav'
+import Home from './pages/Home'
 import Login from './pages/Login'
 import Candidates from './pages/Candidates'
 import Predictions from './pages/Predictions'
@@ -19,7 +21,7 @@ function AppLayout() {
         <Route path="/login" element={<Login />} />
 
         <Route element={<RequireAuth />}>
-          <Route path="/" element={<Navigate to="/candidatas" replace />} />
+          <Route path="/" element={<Home />} />
           <Route path="/candidatas" element={<Candidates />} />
           <Route path="/prediccion/:phaseKey" element={<Predictions />} />
           <Route path="/ranking" element={<Ranking />} />
@@ -33,6 +35,7 @@ function AppLayout() {
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
       <p className="footer-note">Miss Universo Ecuador · hecho con React + Firebase</p>
+      <BottomNav />
     </div>
   )
 }

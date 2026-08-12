@@ -97,11 +97,18 @@ export default function Predictions() {
 
   const podiumOptions = universe
 
+  const canSubmit =
+    !isLocked &&
+    !saving &&
+    (phase.podium
+      ? podium.winner && podium.first && podium.second
+      : picks.length === phase.pickCount)
+  const progressPct = phase.podium
+    ? (['winner', 'first', 'second'].filter((k) => podium[k]).length / 3) * 100
+    : Math.min(100, (picks.length / phase.pickCount) * 100)
+
   return (
     <div className="container">
-      <h1 className="page-title">Mis predicciones</h1>
-      <p className="page-subtitle">Elige tus predicciones para cada fase del certamen.</p>
-
       <div className="tabs">
         {PHASES.map((p) => (
           <button
@@ -114,103 +121,114 @@ export default function Predictions() {
         ))}
       </div>
 
-      <div className="card" style={{ marginBottom: 20 }}>
-        <div className="flex-between">
-          <div>
-            <h2 style={{ marginBottom: 2 }}>{phase.label}</h2>
-            <p className="text-dim" style={{ margin: 0 }}>{phase.description}</p>
-          </div>
-          <StatusBadge status={status} />
+      <div className="flex-between" style={{ alignItems: 'flex-start', marginBottom: 6 }}>
+        <div>
+          <span className="eyebrow">
+            {phase.shortLabel} · {phase.label.toUpperCase()}
+          </span>
+          <h1 className="phase-heading">{phase.description}</h1>
         </div>
-        {phaseState?.deadline && status === PHASE_STATUS.ABIERTA && (
-          <p style={{ marginTop: 10 }}>
-            Cierra en: <Countdown deadline={phaseState.deadline} />
-          </p>
-        )}
-        {scoreInfo && (
-          <div className="alert alert-success" style={{ marginTop: 12 }}>
-            Resultados publicados — obtuviste <strong>{scoreInfo.points} puntos</strong> en esta fase.
-          </div>
+        {phaseState?.deadline && status === PHASE_STATUS.ABIERTA ? (
+          <span className="countdown-pill">
+            <Countdown deadline={phaseState.deadline} /> restantes
+          </span>
+        ) : (
+          <StatusBadge status={status} />
         )}
       </div>
 
-      {blockedByPrevPhase && (
-        <div className="alert alert-info">
+      {!phase.podium && (
+        <>
+          <p style={{ margin: 0 }}>
+            Llevas <strong>{picks.length}</strong>/{phase.pickCount}
+          </p>
+          <div className="progress-track">
+            <div className="progress-fill" style={{ width: `${progressPct}%` }} />
+          </div>
+        </>
+      )}
+
+      {scoreInfo && (
+        <div className="alert alert-success" style={{ marginTop: 16 }}>
+          Resultados publicados — obtuviste <strong>{scoreInfo.points} puntos</strong> en esta fase.
+        </div>
+      )}
+      {isLocked && (
+        <div className="alert alert-info" style={{ marginTop: 16 }}>
+          {status === PHASE_STATUS.PUBLICADA
+            ? 'Los resultados de esta fase ya se publicaron.'
+            : 'Esta fase está cerrada — no se pueden hacer ni editar predicciones.'}
+        </div>
+      )}
+      {message && <div className="alert alert-info" style={{ marginTop: 16 }}>{message}</div>}
+
+      {blockedByPrevPhase ? (
+        <div className="alert alert-info" style={{ marginTop: 16 }}>
           Esta fase se habilita cuando el admin publique los resultados oficiales de{' '}
           {prevPhase.label}.
         </div>
-      )}
-
-      {!blockedByPrevPhase && (
+      ) : !phase.podium ? (
         <>
-          {message && <div className="alert alert-info">{message}</div>}
-
-          {!phase.podium ? (
-            <>
-              <div className="flex-between" style={{ marginBottom: 12 }}>
-                <span>
-                  Seleccionadas: <strong>{picks.length}</strong> / {phase.pickCount}
-                </span>
-                {isLocked && <span className="badge badge-closed">Predicción bloqueada</span>}
-              </div>
-              <div className="grid candidates-grid">
-                {universe.map((c) => (
-                  <CandidateCard
-                    key={c.id}
-                    candidate={c}
-                    selectable={!isLocked}
-                    selected={picks.includes(c.id)}
-                    onToggle={() => togglePick(c.id)}
-                  />
-                ))}
-              </div>
-              {universe.length === 0 && (
-                <div className="alert alert-info">Aún no hay candidatas disponibles para esta fase.</div>
-              )}
-            </>
-          ) : (
-            <div className="card">
-              {isLocked && <span className="badge badge-closed">Predicción bloqueada</span>}
-              <div className="podium-select-row">
-                <PodiumSelect
-                  label="🥇 Ganadora (50 pts)"
-                  value={podium.winner}
-                  options={podiumOptions}
-                  disabled={isLocked}
-                  onChange={(v) => setPodium({ ...podium, winner: v })}
-                />
-                <PodiumSelect
-                  label="🥈 1ra Finalista (30 pts)"
-                  value={podium.first}
-                  options={podiumOptions}
-                  disabled={isLocked}
-                  onChange={(v) => setPodium({ ...podium, first: v })}
-                />
-                <PodiumSelect
-                  label="🥉 2da Finalista (20 pts)"
-                  value={podium.second}
-                  options={podiumOptions}
-                  disabled={isLocked}
-                  onChange={(v) => setPodium({ ...podium, second: v })}
-                />
-              </div>
+          <div className="grid candidates-grid" style={{ marginTop: 20 }}>
+            {universe.map((c) => (
+              <CandidateCard
+                key={c.id}
+                candidate={c}
+                selectable={!isLocked}
+                selected={picks.includes(c.id)}
+                onToggle={() => togglePick(c.id)}
+              />
+            ))}
+          </div>
+          {universe.length === 0 && (
+            <div className="alert alert-info" style={{ marginTop: 16 }}>
+              Aún no hay candidatas disponibles para esta fase.
             </div>
           )}
+        </>
+      ) : (
+        <div className="card" style={{ marginTop: 20 }}>
+          <div className="podium-select-row">
+            <PodiumSelect
+              label="🥇 Ganadora (50 pts)"
+              value={podium.winner}
+              options={podiumOptions}
+              disabled={isLocked}
+              onChange={(v) => setPodium({ ...podium, winner: v })}
+            />
+            <PodiumSelect
+              label="🥈 1ra Finalista (30 pts)"
+              value={podium.first}
+              options={podiumOptions}
+              disabled={isLocked}
+              onChange={(v) => setPodium({ ...podium, first: v })}
+            />
+            <PodiumSelect
+              label="🥉 2da Finalista (20 pts)"
+              value={podium.second}
+              options={podiumOptions}
+              disabled={isLocked}
+              onChange={(v) => setPodium({ ...podium, second: v })}
+            />
+          </div>
+        </div>
+      )}
 
-          {!isLocked && (
-            <button
-              className="btn btn-primary"
-              style={{ marginTop: 20 }}
-              disabled={
-                saving ||
-                (!phase.podium && picks.length !== phase.pickCount) ||
-                (phase.podium && (!podium.winner || !podium.first || !podium.second))
-              }
-              onClick={handleSubmit}
-            >
-              {prediction ? 'Actualizar predicción' : 'Enviar predicción'}
-            </button>
-          )}
+      {!isLocked && !blockedByPrevPhase && (
+        <>
+          <div className="action-bar-spacer" />
+          <div className="action-bar">
+            <div className="action-bar-inner">
+              <span className="text-dim">
+                {phase.podium
+                  ? `${['winner', 'first', 'second'].filter((k) => podium[k]).length}/3 seleccionadas`
+                  : `${picks.length}/${phase.pickCount} seleccionadas`}
+              </span>
+              <button className="btn btn-primary" disabled={!canSubmit} onClick={handleSubmit}>
+                {prediction ? 'Actualizar predicción' : 'Enviar predicción'}
+              </button>
+            </div>
+          </div>
         </>
       )}
     </div>
