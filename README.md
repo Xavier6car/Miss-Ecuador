@@ -97,6 +97,35 @@ npm run build
 - **Firebase Hosting**: `firebase deploy --only hosting` (usa `firebase.json`,
   ya configurado con rewrites a `index.html`).
 
+### Deploy automático con GitHub Actions
+
+El repo ya incluye `.github/workflows/firebase-hosting-merge.yml` (deploy a
+producción en cada push a `main`) y `firebase-hosting-pull-request.yml`
+(preview URL por cada PR). Para activarlos:
+
+1. **Crear el Service Account** que usará GitHub Actions para desplegar.
+   La forma más simple es correr, localmente, con la CLI ya logueada:
+
+   ```bash
+   firebase init hosting:github
+   ```
+
+   Esto crea automáticamente el secret `FIREBASE_SERVICE_ACCOUNT_<PROYECTO>`
+   en tu repo de GitHub. Si el nombre que genera no coincide con
+   `FIREBASE_SERVICE_ACCOUNT_MISS_UNIVERSO_ECUADOR`, ajusta ese nombre en los
+   dos archivos de workflow.
+
+   (Alternativa manual: Google Cloud Console → IAM & Admin → Service Accounts
+   → crear uno con el rol "Firebase Hosting Admin" → generar clave JSON →
+   pegar el contenido completo del JSON como ese secret en GitHub.)
+
+2. **Agregar las variables `VITE_FIREBASE_*` como Secrets** en
+   GitHub → Settings → Secrets and variables → Actions → New repository
+   secret (una por cada variable de tu `.env`).
+
+3. Hacer push a `main` → el Action compila y despliega solo a
+   `https://miss-universo-ecuador.web.app`.
+
 ## 7. Estructura de datos (Firestore)
 
 ```
