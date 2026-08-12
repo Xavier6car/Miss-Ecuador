@@ -45,6 +45,27 @@ export async function deleteCandidate(candidateId) {
 }
 
 /**
+ * Renumera correlativamente (1, 2, 3...) las candidatas ya cargadas,
+ * respetando su orden actual — útil para cerrar huecos de numeración
+ * (por ejemplo, cuando una candidata se retiró y quedó un salto).
+ */
+export async function renumberCandidatesSequential() {
+  const q = query(collection(db, 'candidates'), orderBy('number', 'asc'))
+  const snap = await getDocs(q)
+  const batch = writeBatch(db)
+  let changed = 0
+  snap.docs.forEach((d, index) => {
+    const expected = index + 1
+    if (d.data().number !== expected) {
+      batch.update(d.ref, { number: expected })
+      changed++
+    }
+  })
+  if (changed > 0) await batch.commit()
+  return changed
+}
+
+/**
  * Carga en lote una lista de candidatas (ver `candidatesSeed.js`). Usa un
  * batch de Firestore, así que respeta las mismas reglas de seguridad que
  * `saveCandidate` (solo admin/colaborador). No borra candidatas existentes.
