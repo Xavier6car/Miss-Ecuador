@@ -28,6 +28,8 @@ Stack: **React + Vite** (frontend, publicado en **GitHub Pages**) y
 2. **Authentication** → habilita los proveedores "Email/Password" y "Google".
 3. **Firestore Database** → créala en modo producción (las reglas de este repo
    ya cubren la seguridad).
+3b. **Storage** → actívalo (botón "Comenzar", plan Spark/gratis alcanza). Sirve
+   para subir las fotos de las candidatas desde la app.
 4. En "Configuración del proyecto → Tus apps", crea una app web y copia las
    credenciales.
 5. Copia `.env.example` a `.env` y pega ahí esas credenciales:
@@ -38,15 +40,20 @@ Stack: **React + Vite** (frontend, publicado en **GitHub Pages**) y
 
 6. Despliega las reglas de seguridad con la
    [Firebase CLI](https://firebase.google.com/docs/cli) (Firebase solo se usa
-   aquí para Auth + Firestore, el hosting del frontend es GitHub Pages, ver
-   sección 6):
+   aquí para Auth + Firestore + Storage, el hosting del frontend es GitHub
+   Pages, ver sección 6):
 
    ```bash
    npm install -g firebase-tools
    firebase login
    firebase use --add          # selecciona tu proyecto
-   firebase deploy --only firestore:rules
+   firebase deploy --only firestore:rules,storage
    ```
+
+   Si no quieres instalar la CLI, también puedes pegar el contenido de cada
+   archivo de reglas directo en la consola:
+   - `firestore.rules` → Firestore Database → pestaña "Reglas" → Publicar.
+   - `storage.rules` → Storage → pestaña "Reglas" → Publicar.
 
 7. En **Authentication → Settings → Authorized domains**, agrega el dominio
    donde va a vivir la app en GitHub Pages, por ejemplo
