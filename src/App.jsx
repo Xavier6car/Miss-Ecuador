@@ -1,4 +1,4 @@
-import { HashRouter, Routes, Route, Navigate } from 'react-router-dom'
+import { HashRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom'
 import { AuthProvider, useAuth } from './context/AuthContext'
 import { RequireAuth, RequireRole, FullPageSpinner } from './components/Guards'
 import Navbar from './components/Navbar'
@@ -13,10 +13,12 @@ import AdminHome from './pages/admin/AdminHome'
 
 function AppLayout() {
   const { loading } = useAuth()
+  const location = useLocation()
+  const isLoginScreen = location.pathname === '/login'
   if (loading) return <FullPageSpinner />
   return (
     <div className="app-shell">
-      <Navbar />
+      {!isLoginScreen && <Navbar />}
       <Routes>
         <Route path="/login" element={<Login />} />
 
@@ -34,8 +36,8 @@ function AppLayout() {
 
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
-      <p className="footer-note">Miss Universo Ecuador · hecho con React + Firebase</p>
-      <BottomNav />
+      {!isLoginScreen && <p className="footer-note">Miss Universo Ecuador · hecho con React + Firebase</p>}
+      {!isLoginScreen && <BottomNav />}
     </div>
   )
 }

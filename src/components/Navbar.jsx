@@ -10,54 +10,51 @@ export default function Navbar() {
 
   return (
     <header className="navbar">
-      <div className="navbar-inner">
-        <NavLink to="/" className="brand">
-          <span className="brand-badge">ME</span>
-          <span className="brand-title">Miss Universo Ecuador</span>
-          <span className="brand-subtitle">Predicciones</span>
+      <NavLink to="/" end className="brand">
+        <span className="brand-title">Miss Universo Ecuador</span>
+        <span className="brand-subtitle">Predicciones</span>
+      </NavLink>
+      <nav className="nav-links">
+        <NavLink to="/" end className={({ isActive }) => `nav-link${isActive ? ' active' : ''}`}>
+          Inicio
         </NavLink>
-        <nav className="nav-links">
-          <NavLink to="/" end className={({ isActive }) => `nav-link${isActive ? ' active' : ''}`}>
-            Inicio
+        <NavLink to="/candidatas" className={({ isActive }) => `nav-link${isActive ? ' active' : ''}`}>
+          Candidatas
+        </NavLink>
+        <NavLink
+          to={`/prediccion/${activePhaseKey}`}
+          className={({ isActive }) => `nav-link${isActive ? ' active' : ''}`}
+        >
+          Predicción
+        </NavLink>
+        <NavLink to="/ranking" className={({ isActive }) => `nav-link${isActive ? ' active' : ''}`}>
+          Ranking
+        </NavLink>
+        <NavLink to="/reglas" className={({ isActive }) => `nav-link${isActive ? ' active' : ''}`}>
+          Reglas
+        </NavLink>
+        {(canManageCandidates || isAdmin) && (
+          <NavLink to="/admin" className={({ isActive }) => `nav-link${isActive ? ' active' : ''}`}>
+            Administración
           </NavLink>
-          <NavLink to="/candidatas" className={({ isActive }) => `nav-link${isActive ? ' active' : ''}`}>
-            Candidatas
-          </NavLink>
-          <NavLink
-            to={`/prediccion/${activePhaseKey}`}
-            className={({ isActive }) => `nav-link${isActive ? ' active' : ''}`}
-          >
-            Predicción
-          </NavLink>
-          <NavLink to="/ranking" className={({ isActive }) => `nav-link${isActive ? ' active' : ''}`}>
-            Ranking
-          </NavLink>
-          <NavLink to="/reglas" className={({ isActive }) => `nav-link${isActive ? ' active' : ''}`}>
-            Reglas
-          </NavLink>
-          {(canManageCandidates || isAdmin) && (
-            <NavLink to="/admin" className={({ isActive }) => `nav-link${isActive ? ' active' : ''}`}>
-              Administración
-            </NavLink>
-          )}
-        </nav>
-        {profile && (
-          <div className="nav-user">
-            <span className="stat-pill">
-              <strong>{totalPoints.toLocaleString('es-EC')}</strong> pts
-              {rank && total > 0 && (
-                <>
-                  {' '}
-                  · #{rank} de {total}
-                </>
-              )}
-            </span>
-            <button className="btn btn-sm" onClick={logout}>
-              Salir
-            </button>
-          </div>
         )}
-      </div>
+      </nav>
+      {profile && (
+        <div className="nav-user">
+          <span className="stat-pill">
+            <strong>{totalPoints.toLocaleString('es-EC')} pts</strong>
+            {rank && total > 0 && (
+              <>
+                <span>·</span>
+                <span>#{rank} de {total}</span>
+              </>
+            )}
+          </span>
+          <button className="btn btn-sm" onClick={logout}>
+            Salir
+          </button>
+        </div>
+      )}
     </header>
   )
 }
