@@ -44,6 +44,30 @@ export async function deleteCandidate(candidateId) {
   await deleteDoc(doc(db, 'candidates', candidateId))
 }
 
+/**
+ * Carga en lote una lista de candidatas (ver `candidatesSeed.js`). Usa un
+ * batch de Firestore, así que respeta las mismas reglas de seguridad que
+ * `saveCandidate` (solo admin/colaborador). No borra candidatas existentes.
+ */
+export async function importCandidates(seedList, editor) {
+  const batch = writeBatch(db)
+  for (const c of seedList) {
+    const ref = doc(collection(db, 'candidates'))
+    batch.set(ref, {
+      number: c.number,
+      name: c.name,
+      province: c.province,
+      photoUrl: c.photoUrl || '',
+      bio: c.age ? `${c.age} años` : '',
+      status: 'active',
+      lastEditedBy: editor?.uid || null,
+      lastEditedByName: editor?.name || null,
+      lastEditedAt: serverTimestamp(),
+    })
+  }
+  await batch.commit()
+}
+
 // ---------- Fases ----------
 
 export function listenPhases(callback) {
