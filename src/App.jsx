@@ -2,6 +2,7 @@ import { HashRouter, Routes, Route, Navigate, useLocation } from 'react-router-d
 import { AuthProvider, useAuth } from './context/AuthContext'
 import { RequireAuth, RequireRole, FullPageSpinner } from './components/Guards'
 import Navbar from './components/Navbar'
+import MobileMenu from './components/MobileMenu'
 import BottomNav from './components/BottomNav'
 import Home from './pages/Home'
 import Login from './pages/Login'
@@ -19,6 +20,7 @@ function AppLayout() {
   return (
     <div className="app-shell">
       {!isLoginScreen && <Navbar />}
+      {!isLoginScreen && <MobileMenu />}
       <Routes>
         <Route path="/login" element={<Login />} />
 

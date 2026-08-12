@@ -136,7 +136,7 @@ export default function Candidates({ embedded = false }) {
           <p className="text-dim">{candidates.length} de 26 candidatas cargadas</p>
         )}
         {canManageCandidates && (
-          <div className="flex gap-8">
+          <div className="flex gap-8 candidates-actions" style={{ flexWrap: 'wrap' }}>
             {candidates.length === 0 && (
               <button className="btn" disabled={importing} onClick={handleImport}>
                 {importing ? 'Importando...' : `Importar candidatas oficiales (${CANDIDATES_SEED.length})`}
