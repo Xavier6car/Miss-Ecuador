@@ -1,0 +1,89 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function userRole(uid) {
+      return get(/databases/$(database)/documents/users/$(uid)).data.role;
+    }
+
+    function isAdmin() {
+      return isSignedIn() && userRole(request.auth.uid) == 'admin';
+    }
+
+    function isColaborador() {
+      return isSignedIn() && userRole(request.auth.uid) == 'colaborador';
+    }
+
+    function canManageCandidates() {
+      return isAdmin() || isColaborador();
+    }
+
+    function phaseIsOpen(phase) {
+      return get(/databases/$(database)/documents/phases/$(phase)).data.status == 'abierta';
+    }
+
+    function pickLimit(phase) {
+      return phase == 'phase1' ? 15 : phase == 'phase2' ? 10 : phase == 'phase3' ? 5 : 0;
+    }
+
+    // ---------- users ----------
+    match /users/{userId} {
+      allow read: if isSignedIn();
+
+      // Un usuario nuevo crea su propio doc con rol 'usuario' y 0 puntos.
+      allow create: if isSignedIn() && request.auth.uid == userId
+        && request.resource.data.role == 'usuario'
+        && request.resource.data.totalPoints == 0;
+
+      // El propio usuario puede editar su perfil (nombre) pero no su rol ni sus puntos.
+      // El admin puede editar cualquier cosa (rol, y puntos durante el recálculo).
+      allow update: if isAdmin() || (
+        isSignedIn() && request.auth.uid == userId
+        && request.resource.data.role == resource.data.role
+        && request.resource.data.totalPoints == resource.data.totalPoints
+        && request.resource.data.pointsByPhase == resource.data.pointsByPhase
+      );
+
+      allow delete: if isAdmin();
+    }
+
+    // ---------- candidates ----------
+    match /candidates/{candidateId} {
+      allow read: if isSignedIn();
+      allow write: if canManageCandidates();
+    }
+
+    // ---------- phases (config: status/deadline) ----------
+    match /phases/{phaseId} {
+      allow read: if isSignedIn();
+      allow write: if isAdmin();
+    }
+
+    // ---------- phaseResults (resultados oficiales) ----------
+    match /phaseResults/{phaseId} {
+      allow read: if isSignedIn();
+      allow write: if isAdmin();
+    }
+
+    // ---------- predictions (docId = {uid}_{phase}) ----------
+    match /predictions/{predictionId} {
+      allow read: if isSignedIn() && (resource.data.userId == request.auth.uid || isAdmin());
+
+      allow create, update: if isSignedIn()
+        && request.resource.data.userId == request.auth.uid
+        && predictionId == request.auth.uid + '_' + request.resource.data.phase
+        && phaseIsOpen(request.resource.data.phase)
+        && (
+          request.resource.data.phase == 'phase4'
+          || request.resource.data.picks.size() <= pickLimit(request.resource.data.phase)
+        );
+
+      allow delete: if false;
+    }
+  }
+}
