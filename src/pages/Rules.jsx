@@ -1,8 +1,9 @@
 export default function Rules() {
   return (
     <div className="container">
+      <span className="eyebrow">Cómo funciona</span>
       <h1 className="page-title">Reglas</h1>
-      <p className="page-subtitle">Cómo funciona Miss Universo Ecuador.</p>
+      <p className="page-subtitle">Todo lo que necesitas saber para jugar la Predicción de Miss Universo Ecuador.</p>
 
       <div className="card" style={{ marginBottom: 16 }}>
         <h3>Fases</h3>

@@ -9,7 +9,7 @@ import {
   publishPhaseResultsAndRecalculate,
   ensurePhaseDocs,
 } from '../../lib/data'
-import CandidateCard from '../../components/CandidateCard'
+import { PoolCard } from '../../components/CandidateCard'
 
 export default function AdminPhases() {
   const [candidates, setCandidates] = useState([])
@@ -186,12 +186,11 @@ function PhaseAdminCard({ phase, candidates, phaseState, prevResult, result }) {
               </p>
               <div className="grid candidates-grid">
                 {universe.map((c) => (
-                  <CandidateCard
+                  <PoolCard
                     key={c.id}
                     candidate={c}
-                    selectable
                     selected={officialPicks.includes(c.id)}
-                    onToggle={() => togglePick(c.id)}
+                    onClick={() => togglePick(c.id)}
                   />
                 ))}
               </div>

@@ -24,8 +24,18 @@ export default function Candidates({ embedded = false }) {
   const [renumberMsg, setRenumberMsg] = useState('')
   const [uploadingPhoto, setUploadingPhoto] = useState(false)
   const [uploadError, setUploadError] = useState('')
+  const [search, setSearch] = useState('')
+  const [province, setProvince] = useState('Todas')
 
   useEffect(() => listenCandidates(setCandidates), [])
+
+  const provinces = ['Todas', ...new Set(candidates.map((c) => c.province).filter(Boolean))]
+  const q = search.trim().toLowerCase()
+  const visibleCandidates = candidates.filter(
+    (c) =>
+      (province === 'Todas' || c.province === province) &&
+      (!q || c.name.toLowerCase().includes(q) || (c.province || '').toLowerCase().includes(q)),
+  )
 
   function startEdit(candidate) {
     setEditing(candidate.id)
@@ -235,8 +245,38 @@ export default function Candidates({ embedded = false }) {
         </div>
       )}
 
+      {candidates.length > 0 && (
+        <>
+          <div className="flex gap-8" style={{ alignItems: 'center', marginBottom: 12, flexWrap: 'wrap' }}>
+            <div className="search-input-wrap">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="rgba(245,239,230,0.5)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <circle cx="11" cy="11" r="8" />
+                <path d="M21 21l-4.3-4.3" />
+              </svg>
+              <input
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                placeholder="Buscar por nombre o provincia"
+              />
+            </div>
+          </div>
+
+          <div className="chip-row" style={{ marginBottom: 16 }}>
+            {provinces.map((p) => (
+              <div
+                key={p}
+                className={`chip${province === p ? ' active' : ''}`}
+                onClick={() => setProvince(p)}
+              >
+                {p}
+              </div>
+            ))}
+          </div>
+        </>
+      )}
+
       <div className="grid candidates-grid">
-        {candidates.map((c) => (
+        {visibleCandidates.map((c) => (
           <div key={c.id}>
             <CandidateCard candidate={c} showStatus />
             {canManageCandidates && (
@@ -258,6 +298,9 @@ export default function Candidates({ embedded = false }) {
           Todavía no hay candidatas cargadas.
           {canManageCandidates ? ' Usa "Agregar candidata" para empezar.' : ' Vuelve pronto.'}
         </div>
+      )}
+      {candidates.length > 0 && visibleCandidates.length === 0 && (
+        <div className="alert alert-info">Ninguna candidata coincide con la búsqueda.</div>
       )}
     </div>
   )
