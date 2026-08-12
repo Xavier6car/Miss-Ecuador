@@ -14,10 +14,10 @@ function PhotoOrPlaceholder({ candidate, className }) {
 }
 
 /** Tarjeta de la página "Candidatas" — con marco propio, número y estado. */
-export function CandidateCard({ candidate, showStatus }) {
+export function CandidateCard({ candidate, showStatus, onClick }) {
   const eliminated = candidate.status === 'eliminated'
   return (
-    <div className="candidate-card">
+    <div className={`candidate-card${onClick ? ' clickable' : ''}`} onClick={onClick} role={onClick ? 'button' : undefined} tabIndex={onClick ? 0 : undefined}>
       <div className="candidate-photo-wrap" style={eliminated && showStatus ? { filter: 'grayscale(0.85) brightness(0.7)' } : undefined}>
         <PhotoOrPlaceholder candidate={candidate} className="candidate-photo" />
         <span className="candidate-number-badge">{candidate.number ?? '-'}</span>
