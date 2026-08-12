@@ -1,7 +1,7 @@
 // Lista oficial de candidatas Miss Universo Ecuador 2026, según la nota de
-// Primicias. La candidata #14 (Tatiana Lasso, Loja) se retiró del certamen,
-// así que no está incluida — se mantienen los números originales de las
-// demás 26 tal como los publicó el medio (por eso el salto del 13 al 15).
+// Primicias. La candidata que originalmente era la #14 (Tatiana Lasso, Loja)
+// se retiró del certamen, así que no está incluida — el resto se renumeró
+// de forma correlativa del 1 al 26 (sin dejar el hueco del 14).
 //
 // `photoUrl` queda vacío a propósito: no tenemos las URLs de las fotos.
 // Cárgalas después editando cada candidata desde Administración → Candidatas.
@@ -19,18 +19,19 @@ export const CANDIDATES_SEED = [
   { number: 11, name: 'Dalia Bucaram', province: 'Guayaquil', age: 20 },
   { number: 12, name: 'Martha Guerrero', province: 'Guayas', age: 23 },
   { number: 13, name: 'Karol Espinoza', province: 'Imbabura', age: 27 },
-  // 14 — Tatiana Lasso (Loja) se retiró, no se incluye.
-  { number: 15, name: 'Dagmar Prieto', province: 'Los Ríos', age: 26 },
-  { number: 16, name: 'Shyare Andrade', province: 'Manabí', age: 22 },
-  { number: 17, name: 'Lesly Garaycochea', province: 'Morona Santiago', age: 24 },
-  { number: 18, name: 'Nubia Sandoval', province: 'Pastaza', age: 31 },
-  { number: 19, name: 'Camila Proaño', province: 'Pichincha', age: 21 },
-  { number: 20, name: 'Francesca Piza', province: 'Portoviejo', age: 22 },
-  { number: 21, name: 'Katiushka Cobo', province: 'Quito DM', age: 26 },
-  { number: 22, name: 'Ana Cristina Larrea', province: 'Región Central', age: 34 },
-  { number: 23, name: 'Samara Montero', province: 'Región Costa', age: 29 },
-  { number: 24, name: 'Carolina Tamayo', province: 'Región Sierra', age: 29 },
-  { number: 25, name: 'Verónica Lindao', province: 'Riobamba', age: 31 },
-  { number: 26, name: 'Ariana María Aray Gómez', province: 'Santa Elena', age: 24 },
-  { number: 27, name: 'Ana Galarza', province: 'Tungurahua', age: 36 },
+  // La candidata #14 original (Tatiana Lasso, Loja) se retiró; el resto
+  // corre un número hacia adelante.
+  { number: 14, name: 'Dagmar Prieto', province: 'Los Ríos', age: 26 },
+  { number: 15, name: 'Shyare Andrade', province: 'Manabí', age: 22 },
+  { number: 16, name: 'Lesly Garaycochea', province: 'Morona Santiago', age: 24 },
+  { number: 17, name: 'Nubia Sandoval', province: 'Pastaza', age: 31 },
+  { number: 18, name: 'Camila Proaño', province: 'Pichincha', age: 21 },
+  { number: 19, name: 'Francesca Piza', province: 'Portoviejo', age: 22 },
+  { number: 20, name: 'Katiushka Cobo', province: 'Quito DM', age: 26 },
+  { number: 21, name: 'Ana Cristina Larrea', province: 'Región Central', age: 34 },
+  { number: 22, name: 'Samara Montero', province: 'Región Costa', age: 29 },
+  { number: 23, name: 'Carolina Tamayo', province: 'Región Sierra', age: 29 },
+  { number: 24, name: 'Verónica Lindao', province: 'Riobamba', age: 31 },
+  { number: 25, name: 'Ariana María Aray Gómez', province: 'Santa Elena', age: 24 },
+  { number: 26, name: 'Ana Galarza', province: 'Tungurahua', age: 36 },
 ]

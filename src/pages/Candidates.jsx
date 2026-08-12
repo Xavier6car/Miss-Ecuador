@@ -1,6 +1,12 @@
 import { useEffect, useState } from 'react'
 import { useAuth } from '../context/AuthContext'
-import { listenCandidates, saveCandidate, deleteCandidate, importCandidates } from '../lib/data'
+import {
+  listenCandidates,
+  saveCandidate,
+  deleteCandidate,
+  importCandidates,
+  renumberCandidatesSequential,
+} from '../lib/data'
 import { CANDIDATES_SEED } from '../lib/candidatesSeed'
 import { uploadCandidatePhoto } from '../lib/storage'
 import CandidateCard from '../components/CandidateCard'
@@ -14,6 +20,8 @@ export default function Candidates({ embedded = false }) {
   const [form, setForm] = useState(emptyForm)
   const [saving, setSaving] = useState(false)
   const [importing, setImporting] = useState(false)
+  const [renumbering, setRenumbering] = useState(false)
+  const [renumberMsg, setRenumberMsg] = useState('')
   const [uploadingPhoto, setUploadingPhoto] = useState(false)
   const [uploadError, setUploadError] = useState('')
 
@@ -75,6 +83,19 @@ export default function Candidates({ embedded = false }) {
     await deleteCandidate(id)
   }
 
+  async function handleRenumber() {
+    if (!confirm('Esto va a renumerar todas las candidatas de forma correlativa (1, 2, 3...) según su orden actual. ¿Continuar?'))
+      return
+    setRenumbering(true)
+    setRenumberMsg('')
+    try {
+      const changed = await renumberCandidatesSequential()
+      setRenumberMsg(changed > 0 ? `Se corrigió el número de ${changed} candidata(s).` : 'La numeración ya estaba correcta.')
+    } finally {
+      setRenumbering(false)
+    }
+  }
+
   async function handleImport() {
     if (
       !confirm(
@@ -111,12 +132,19 @@ export default function Candidates({ embedded = false }) {
                 {importing ? 'Importando...' : `Importar candidatas oficiales (${CANDIDATES_SEED.length})`}
               </button>
             )}
+            {candidates.length > 0 && (
+              <button className="btn" disabled={renumbering} onClick={handleRenumber}>
+                {renumbering ? 'Renumerando...' : 'Renumerar correlativo (1-26)'}
+              </button>
+            )}
             <button className="btn btn-primary" onClick={startNew}>
               + Agregar candidata
             </button>
           </div>
         )}
       </div>
+
+      {renumberMsg && <div className="alert alert-success">{renumberMsg}</div>}
 
       {editing && (
         <div className="card" style={{ marginBottom: 24 }}>
