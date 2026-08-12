@@ -5,7 +5,8 @@ Cada participante predice quiénes avanzan en cada corte (Top 15 → Top 10 → 
 → Podio) y va sumando puntos a medida que el administrador publica los
 resultados oficiales.
 
-Stack: **React + Vite** (frontend) y **Firebase** (Auth + Firestore).
+Stack: **React + Vite** (frontend, publicado en **GitHub Pages**) y
+**Firebase** (Auth + Firestore como backend).
 
 ## 1. Funcionalidad
 
@@ -35,8 +36,10 @@ Stack: **React + Vite** (frontend) y **Firebase** (Auth + Firestore).
    cp .env.example .env
    ```
 
-6. Despliega las reglas de seguridad y (opcionalmente) el hosting con la
-   [Firebase CLI](https://firebase.google.com/docs/cli):
+6. Despliega las reglas de seguridad con la
+   [Firebase CLI](https://firebase.google.com/docs/cli) (Firebase solo se usa
+   aquí para Auth + Firestore, el hosting del frontend es GitHub Pages, ver
+   sección 6):
 
    ```bash
    npm install -g firebase-tools
@@ -44,6 +47,10 @@ Stack: **React + Vite** (frontend) y **Firebase** (Auth + Firestore).
    firebase use --add          # selecciona tu proyecto
    firebase deploy --only firestore:rules
    ```
+
+7. En **Authentication → Settings → Authorized domains**, agrega el dominio
+   donde va a vivir la app en GitHub Pages, por ejemplo
+   `xavier6car.github.io` — si no, el login con Google se bloquea ahí.
 
 ## 3. Correr localmente
 
@@ -84,47 +91,54 @@ o ascender a otro admin, todo desde la UI.
 7. El **Ranking** se actualiza solo, en tiempo real, para todos los que
    tengan la app abierta.
 
-## 6. Despliegue (Netlify o Firebase Hosting)
+## 6. Despliegue en GitHub Pages
+
+El frontend se publica en GitHub Pages con un workflow de GitHub Actions ya
+incluido en `.github/workflows/gh-pages.yml`. El router usa `HashRouter`
+(URLs con `#`, ej. `.../#/candidatas`) justamente para que funcione en Pages
+sin necesitar configuración extra de rewrites en el servidor.
+
+### Activar GitHub Pages en el repo (una sola vez)
+
+1. GitHub → repo → **Settings → Pages** → en "Build and deployment", como
+   **Source** elige **GitHub Actions** (no "Deploy from a branch").
+
+### Agregar los secrets del build
+
+GitHub → repo → **Settings → Secrets and variables → Actions → New
+repository secret**, uno por cada variable de tu `.env`:
+
+```
+VITE_FIREBASE_API_KEY
+VITE_FIREBASE_AUTH_DOMAIN
+VITE_FIREBASE_PROJECT_ID
+VITE_FIREBASE_STORAGE_BUCKET
+VITE_FIREBASE_MESSAGING_SENDER_ID
+VITE_FIREBASE_APP_ID
+```
+
+### Deploy
+
+Cada push a `main` dispara el workflow automáticamente: compila con
+`npm run build` (usando esos secrets) y publica el contenido de `dist/` en
+GitHub Pages. También puedes dispararlo a mano desde la pestaña **Actions**
+del repo ("Run workflow").
+
+La URL final queda algo así:
+```
+https://xavier6car.github.io/Miss-Ecuador/
+```
+
+No olvides el paso 7 de la sección anterior (agregar ese dominio en
+Firebase Authentication → Authorized domains) o el login con Google fallará
+ahí.
+
+### Build local (para probar antes de pushear)
 
 ```bash
 npm run build
+npm run preview
 ```
-
-- **Netlify**: conecta el repo, build command `npm run build`, publish
-  directory `dist`. Ya incluye `public/_redirects` para que las rutas de
-  React Router funcionen. Configura las variables `VITE_FIREBASE_*` en
-  Netlify → Site settings → Environment variables.
-- **Firebase Hosting**: `firebase deploy --only hosting` (usa `firebase.json`,
-  ya configurado con rewrites a `index.html`).
-
-### Deploy automático con GitHub Actions
-
-El repo ya incluye `.github/workflows/firebase-hosting-merge.yml` (deploy a
-producción en cada push a `main`) y `firebase-hosting-pull-request.yml`
-(preview URL por cada PR). Para activarlos:
-
-1. **Crear el Service Account** que usará GitHub Actions para desplegar.
-   La forma más simple es correr, localmente, con la CLI ya logueada:
-
-   ```bash
-   firebase init hosting:github
-   ```
-
-   Esto crea automáticamente el secret `FIREBASE_SERVICE_ACCOUNT_<PROYECTO>`
-   en tu repo de GitHub. Si el nombre que genera no coincide con
-   `FIREBASE_SERVICE_ACCOUNT_MISS_UNIVERSO_ECUADOR`, ajusta ese nombre en los
-   dos archivos de workflow.
-
-   (Alternativa manual: Google Cloud Console → IAM & Admin → Service Accounts
-   → crear uno con el rol "Firebase Hosting Admin" → generar clave JSON →
-   pegar el contenido completo del JSON como ese secret en GitHub.)
-
-2. **Agregar las variables `VITE_FIREBASE_*` como Secrets** en
-   GitHub → Settings → Secrets and variables → Actions → New repository
-   secret (una por cada variable de tu `.env`).
-
-3. Hacer push a `main` → el Action compila y despliega solo a
-   `https://miss-universo-ecuador.web.app`.
 
 ## 7. Estructura de datos (Firestore)
 
