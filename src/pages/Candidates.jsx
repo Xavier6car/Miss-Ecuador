@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { useAuth } from '../context/AuthContext'
 import { listenCandidates, saveCandidate, deleteCandidate, importCandidates } from '../lib/data'
 import { CANDIDATES_SEED } from '../lib/candidatesSeed'
+import { uploadCandidatePhoto } from '../lib/storage'
 import CandidateCard from '../components/CandidateCard'
 
 const emptyForm = { number: '', name: '', province: '', photoUrl: '', bio: '', status: 'active' }
@@ -13,11 +14,14 @@ export default function Candidates({ embedded = false }) {
   const [form, setForm] = useState(emptyForm)
   const [saving, setSaving] = useState(false)
   const [importing, setImporting] = useState(false)
+  const [uploadingPhoto, setUploadingPhoto] = useState(false)
+  const [uploadError, setUploadError] = useState('')
 
   useEffect(() => listenCandidates(setCandidates), [])
 
   function startEdit(candidate) {
     setEditing(candidate.id)
+    setUploadError('')
     setForm({
       number: candidate.number ?? '',
       name: candidate.name ?? '',
@@ -30,7 +34,24 @@ export default function Candidates({ embedded = false }) {
 
   function startNew() {
     setEditing('new')
+    setUploadError('')
     setForm(emptyForm)
+  }
+
+  async function handlePhotoFile(e) {
+    const file = e.target.files?.[0]
+    e.target.value = '' // permite volver a elegir el mismo archivo si falla
+    if (!file) return
+    setUploadError('')
+    setUploadingPhoto(true)
+    try {
+      const url = await uploadCandidatePhoto(editing, file)
+      setForm((f) => ({ ...f, photoUrl: url }))
+    } catch (err) {
+      setUploadError(err.message)
+    } finally {
+      setUploadingPhoto(false)
+    }
   }
 
   async function handleSave(e) {
@@ -125,11 +146,30 @@ export default function Candidates({ embedded = false }) {
               />
             </div>
             <div className="form-row">
-              <label>URL de la foto</label>
+              <label>Foto</label>
+              {form.photoUrl && (
+                <img
+                  src={form.photoUrl}
+                  alt="Vista previa"
+                  style={{ width: 96, height: 128, objectFit: 'cover', borderRadius: 8, marginBottom: 6 }}
+                />
+              )}
+              {editing !== 'new' ? (
+                <>
+                  <input type="file" accept="image/*" disabled={uploadingPhoto} onChange={handlePhotoFile} />
+                  {uploadingPhoto && <p className="text-dim" style={{ fontSize: 12 }}>Subiendo...</p>}
+                  {uploadError && <p style={{ color: 'var(--danger)', fontSize: 12 }}>{uploadError}</p>}
+                </>
+              ) : (
+                <p className="text-dim" style={{ fontSize: 12 }}>
+                  Guarda la candidata primero; después edítala para subir su foto.
+                </p>
+              )}
               <input
                 value={form.photoUrl}
                 onChange={(e) => setForm({ ...form, photoUrl: e.target.value })}
-                placeholder="https://..."
+                placeholder="...o pega una URL de imagen aquí"
+                style={{ marginTop: 6 }}
               />
             </div>
             <div className="form-row">

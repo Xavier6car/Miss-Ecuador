@@ -1,0 +1,18 @@
+rules_version = '2';
+
+service firebase.storage {
+  match /b/{bucket}/o {
+    match /candidates/{fileName} {
+      // Las fotos de candidatas son públicas para verlas (la app las
+      // muestra con <img> sin autenticación).
+      allow read: if true;
+
+      // Solo admin/colaborador pueden subir/reemplazar fotos, y solo
+      // imágenes de hasta 5MB.
+      allow write: if request.auth != null
+        && firestore.get(/databases/(default)/documents/users/$(request.auth.uid)).data.role in ['admin', 'colaborador']
+        && request.resource.size < 5 * 1024 * 1024
+        && request.resource.contentType.matches('image/.*');
+    }
+  }
+}
