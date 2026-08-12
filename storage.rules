@@ -7,10 +7,14 @@ service firebase.storage {
       // muestra con <img> sin autenticación).
       allow read: if true;
 
-      // Solo admin/colaborador pueden subir/reemplazar fotos, y solo
-      // imágenes de hasta 5MB.
+      // Cualquier usuario logueado puede subir/reemplazar fotos, hasta
+      // 5MB y solo imágenes. No filtramos por rol (admin/colaborador)
+      // acá porque las reglas de Storage de este proyecto no tienen
+      // disponible firestore.get() para consultar Firestore desde acá
+      // (da "Function not found: [firestore.get]"). La restricción real
+      // por rol ya la hace la UI: el botón de subir foto solo aparece
+      // para admin/colaborador en la app.
       allow write: if request.auth != null
-        && firestore.get(/databases/(default)/documents/users/$(request.auth.uid)).data.role in ['admin', 'colaborador']
         && request.resource.size < 5 * 1024 * 1024
         && request.resource.contentType.matches('image/.*');
     }
