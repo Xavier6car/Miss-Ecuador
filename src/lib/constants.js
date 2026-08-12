@@ -1,4 +1,4 @@
-// Definición de las 4 fases de la Polla Miss Ecuador.
+// Definición de las 4 fases de la Polla Miss Universo Ecuador.
 // `pickCount` = cuántas candidatas debe elegir el usuario en esa fase.
 // `podium` = true en la fase donde en vez de una lista se predice el podio exacto.
 export const PHASES = [

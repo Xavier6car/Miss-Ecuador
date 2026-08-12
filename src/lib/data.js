@@ -98,7 +98,9 @@ export async function setPhaseConfig(phaseKey, { status, deadline }) {
   const patch = { updatedAt: serverTimestamp() }
   if (status !== undefined) patch.status = status
   if (deadline !== undefined) patch.deadline = deadline
-  await updateDoc(ref, patch)
+  // setDoc con merge (en vez de updateDoc) porque el documento de la fase
+  // puede no existir todavía la primera vez que el admin la abre.
+  await setDoc(ref, patch, { merge: true })
 }
 
 // ---------- Resultados oficiales por fase ----------
