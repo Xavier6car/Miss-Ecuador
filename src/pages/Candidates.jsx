@@ -10,6 +10,7 @@ import {
 import { CANDIDATES_SEED } from '../lib/candidatesSeed'
 import { uploadCandidatePhoto } from '../lib/storage'
 import CandidateCard from '../components/CandidateCard'
+import CandidateModal from '../components/CandidateModal'
 
 const emptyForm = { number: '', name: '', province: '', photoUrl: '', bio: '', status: 'active' }
 
@@ -26,6 +27,7 @@ export default function Candidates({ embedded = false }) {
   const [uploadError, setUploadError] = useState('')
   const [search, setSearch] = useState('')
   const [province, setProvince] = useState('Todas')
+  const [viewing, setViewing] = useState(null)
 
   useEffect(() => listenCandidates(setCandidates), [])
 
@@ -278,7 +280,7 @@ export default function Candidates({ embedded = false }) {
       <div className="grid candidates-grid">
         {visibleCandidates.map((c) => (
           <div key={c.id}>
-            <CandidateCard candidate={c} showStatus />
+            <CandidateCard candidate={c} showStatus onClick={() => setViewing(c)} />
             {canManageCandidates && (
               <button className="btn btn-sm" style={{ width: '100%', marginTop: 6 }} onClick={() => startEdit(c)}>
                 Editar
@@ -302,6 +304,8 @@ export default function Candidates({ embedded = false }) {
       {candidates.length > 0 && visibleCandidates.length === 0 && (
         <div className="alert alert-info">Ninguna candidata coincide con la búsqueda.</div>
       )}
+
+      {viewing && <CandidateModal candidate={viewing} onClose={() => setViewing(null)} />}
     </div>
   )
 }
