@@ -13,7 +13,7 @@ import {
   serverTimestamp,
 } from 'firebase/firestore'
 import { db } from '../firebase'
-import { PHASES, getPhase } from './constants'
+import { PHASES, PHASE_STATUS, getPhase } from './constants'
 import { scorePrediction, sumTotalPoints } from './scoring'
 
 // ---------- Candidatas ----------
@@ -190,6 +190,19 @@ export async function publishPhaseResultsAndRecalculate(phaseKey, officialData) 
     { merge: true },
   )
   await setPhaseConfig(phaseKey, { status: 'resultados_publicados' })
+  await recalcPointsForPhase(phaseKey)
+}
+
+/**
+ * Anula los resultados oficiales ya publicados de una fase: borra el
+ * documento de resultados, vuelve a poner la fase en 'cerrada' y recalcula
+ * los puntos de todos los usuarios (quedan en 0 para esta fase, ya que no
+ * hay resultado oficial contra el cual comparar). Útil para deshacer una
+ * publicación hecha por error (p. ej. sin elegir candidatas).
+ */
+export async function unpublishPhaseResults(phaseKey) {
+  await deleteDoc(doc(db, 'phaseResults', phaseKey))
+  await setPhaseConfig(phaseKey, { status: PHASE_STATUS.CERRADA })
   await recalcPointsForPhase(phaseKey)
 }
 

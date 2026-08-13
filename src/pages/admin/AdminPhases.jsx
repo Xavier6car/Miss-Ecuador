@@ -7,6 +7,7 @@ import {
   listenPhaseResults,
   setPhaseConfig,
   publishPhaseResultsAndRecalculate,
+  unpublishPhaseResults,
   ensurePhaseDocs,
 } from '../../lib/data'
 import { PoolCard } from '../../components/CandidateCard'
@@ -129,13 +130,45 @@ function PhaseAdminCard({ phase, candidates, phaseState, prevResult, result }) {
     })
   }
 
+  const hasSelection = phase.podium
+    ? Boolean(podium.winner && podium.first && podium.second)
+    : officialPicks.length > 0
+  const hasPublishedResult = Boolean(result) || status === PHASE_STATUS.PUBLICADA
+
   async function publish() {
+    if (!hasSelection) {
+      setMsg(
+        phase.podium
+          ? 'Elige las 3 posiciones del podio antes de publicar.'
+          : 'Selecciona al menos una candidata antes de publicar.',
+      )
+      return
+    }
     setBusy(true)
     setMsg('')
     try {
       const payload = phase.podium ? { podium } : { officialPicks }
       await publishPhaseResultsAndRecalculate(phase.key, payload)
       setMsg('Resultados publicados y puntos recalculados para todos los usuarios.')
+    } catch (err) {
+      setMsg('Error: ' + err.message)
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  async function handleUnpublish() {
+    const ok = window.confirm(
+      `¿Anular los resultados de ${phase.label}? Esto borra el resultado oficial de esta fase y pone en 0 los puntos que ganaron todos los jugadores en ella. No se puede deshacer.`,
+    )
+    if (!ok) return
+    setBusy(true)
+    setMsg('')
+    try {
+      await unpublishPhaseResults(phase.key)
+      setOfficialPicks([])
+      setPodium({ winner: '', first: '', second: '' })
+      setMsg('Resultados anulados: la fase quedó sin publicar y los puntos de esta fase se pusieron en 0 para todos.')
     } catch (err) {
       setMsg('Error: ' + err.message)
     } finally {
@@ -235,9 +268,21 @@ function PhaseAdminCard({ phase, candidates, phaseState, prevResult, result }) {
 
           {msg && <div className="alert alert-success" style={{ marginTop: 12 }}>{msg}</div>}
 
-          <button className="btn btn-primary" style={{ marginTop: 14 }} disabled={busy} onClick={publish}>
-            Publicar resultados y recalcular puntos
-          </button>
+          <div className="flex gap-8" style={{ marginTop: 14, flexWrap: 'wrap' }}>
+            <button
+              className="btn btn-primary"
+              disabled={busy || !hasSelection}
+              onClick={publish}
+              title={!hasSelection ? 'Selecciona primero quiénes avanzaron' : undefined}
+            >
+              Publicar resultados y recalcular puntos
+            </button>
+            {hasPublishedResult && (
+              <button className="btn btn-sm" disabled={busy} onClick={handleUnpublish}>
+                Anular resultados de esta fase
+              </button>
+            )}
+          </div>
         </>
       )}
     </div>
