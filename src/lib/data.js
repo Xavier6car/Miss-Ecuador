@@ -13,7 +13,7 @@ import {
   serverTimestamp,
 } from 'firebase/firestore'
 import { db } from '../firebase'
-import { PHASES, PHASE_STATUS, getPhase } from './constants'
+import { PHASES, PHASE_STATUS, getPhase, previousPhase } from './constants'
 import { scorePrediction, sumTotalPoints } from './scoring'
 
 // ---------- Candidatas ----------
@@ -173,34 +173,87 @@ async function getAllPredictionsForPhase(phaseKey) {
 // ---------- Publicar resultados + recalcular puntos (solo admin) ----------
 
 /**
+ * IDs de las candidatas que compiten en una fase (de entre las cuales el
+ * admin elige quiénes avanzan). En Fase 1 son todas las activas; en las
+ * siguientes, las que oficialmente avanzaron en la fase anterior.
+ */
+async function getPhaseUniverseIds(phaseKey) {
+  const prevPhase = previousPhase(phaseKey)
+  if (!prevPhase) {
+    const snap = await getDocs(collection(db, 'candidates'))
+    return snap.docs.filter((d) => d.data().status !== 'eliminated').map((d) => d.id)
+  }
+  const prevResult = await getPhaseResults(prevPhase.key)
+  return prevResult?.officialPicks || []
+}
+
+function advancingIdsFromOfficialData(phase, officialData) {
+  if (phase.podium) {
+    return [officialData.podium?.winner, officialData.podium?.first, officialData.podium?.second].filter(Boolean)
+  }
+  return officialData.officialPicks || []
+}
+
+/**
  * Publica el resultado oficial de una fase y recalcula, para TODOS los
  * usuarios, los puntos obtenidos en esa fase. Es seguro volver a llamarla
  * (por ejemplo si el admin corrige un resultado ya publicado): sobreescribe
  * el puntaje de esa fase y vuelve a sumar el total.
+ *
+ * Además marca automáticamente como `eliminated` a las candidatas del
+ * universo de esta fase que NO quedaron entre las que avanzaron, para que
+ * ya no aparezcan disponibles en la fase siguiente ni en "Candidatas".
  */
 export async function publishPhaseResultsAndRecalculate(phaseKey, officialData) {
+  const phase = getPhase(phaseKey)
+  const universeIds = await getPhaseUniverseIds(phaseKey)
+  const advancingIds = advancingIdsFromOfficialData(phase, officialData)
+  const advancingSet = new Set(advancingIds)
+  const eliminatedIds = universeIds.filter((id) => !advancingSet.has(id))
+
   const resultRef = doc(db, 'phaseResults', phaseKey)
   await setDoc(
     resultRef,
     {
       ...officialData,
+      eliminatedIds,
       publishedAt: serverTimestamp(),
       status: 'resultados_publicados',
     },
     { merge: true },
   )
   await setPhaseConfig(phaseKey, { status: 'resultados_publicados' })
+
+  if (eliminatedIds.length > 0 || advancingIds.length > 0) {
+    const batch = writeBatch(db)
+    eliminatedIds.forEach((id) => batch.update(doc(db, 'candidates', id), { status: 'eliminated' }))
+    // Por si se está corrigiendo un resultado ya publicado: las que ahora sí
+    // avanzan quedan activas de nuevo (por si antes se habían eliminado).
+    advancingIds.forEach((id) => batch.update(doc(db, 'candidates', id), { status: 'active' }))
+    await batch.commit()
+  }
+
   await recalcPointsForPhase(phaseKey)
 }
 
 /**
  * Anula los resultados oficiales ya publicados de una fase: borra el
- * documento de resultados, vuelve a poner la fase en 'cerrada' y recalcula
+ * documento de resultados, vuelve a poner la fase en 'cerrada', recalcula
  * los puntos de todos los usuarios (quedan en 0 para esta fase, ya que no
- * hay resultado oficial contra el cual comparar). Útil para deshacer una
- * publicación hecha por error (p. ej. sin elegir candidatas).
+ * hay resultado oficial contra el cual comparar) y reactiva las candidatas
+ * que se habían marcado como eliminadas por esta fase. Útil para deshacer
+ * una publicación hecha por error (p. ej. sin elegir candidatas).
  */
 export async function unpublishPhaseResults(phaseKey) {
+  const existing = await getPhaseResults(phaseKey)
+  const eliminatedIds = existing?.eliminatedIds || []
+
+  if (eliminatedIds.length > 0) {
+    const batch = writeBatch(db)
+    eliminatedIds.forEach((id) => batch.update(doc(db, 'candidates', id), { status: 'active' }))
+    await batch.commit()
+  }
+
   await deleteDoc(doc(db, 'phaseResults', phaseKey))
   await setPhaseConfig(phaseKey, { status: PHASE_STATUS.CERRADA })
   await recalcPointsForPhase(phaseKey)
