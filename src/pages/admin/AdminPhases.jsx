@@ -29,6 +29,19 @@ export default function AdminPhases() {
     return () => unsubs.forEach((u) => u())
   }, [])
 
+  // Autolimpieza: si una fase quedó marcada 'abierta' pero con un deadline
+  // vencido de antes (p. ej. de una prueba, o de antes de este arreglo), se
+  // limpia sola en cuanto se carga este panel — ya no depende de que el
+  // admin vuelva a tocar "Abrir fase" en cada una para que se corrija.
+  useEffect(() => {
+    for (const phase of PHASES) {
+      const state = phases[phase.key]
+      if (state?.status === PHASE_STATUS.ABIERTA && state.deadline && state.deadline.toMillis() < Date.now()) {
+        setPhaseConfig(phase.key, { deadline: null }).catch(() => {})
+      }
+    }
+  }, [phases])
+
   const activePhases = PHASES.filter((p) => phases[p.key]?.status === PHASE_STATUS.ABIERTA)
 
   return (
