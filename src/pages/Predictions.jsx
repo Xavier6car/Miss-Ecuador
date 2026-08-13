@@ -39,6 +39,20 @@ export default function Predictions() {
   const phase = PHASES.find((p) => p.key === phaseKey) || PHASES[0]
   const prevPhase = previousPhase(phase.key)
 
+  // Al cambiar de fase (pestaña) hay que limpiar de inmediato la selección
+  // en memoria de la fase anterior — si no, mientras llega el snapshot de
+  // Firestore para la fase nueva, se alcanzan a ver por un instante (o
+  // incluso quedan pegadas) las candidatas que se habían tocado sin enviar
+  // en la fase de la que se viene. Se ajusta durante el render (no en un
+  // useEffect) para que no haya ni un frame con el dato viejo.
+  const [renderedPhaseKey, setRenderedPhaseKey] = useState(phase.key)
+  if (renderedPhaseKey !== phase.key) {
+    setRenderedPhaseKey(phase.key)
+    setPrediction(null)
+    setPicks([])
+    setPodium({ winner: '', first: '', second: '' })
+  }
+
   useEffect(() => listenCandidates(setCandidates), [])
   useEffect(() => listenPhases((key, data) => setPhases((prev) => ({ ...prev, [key]: data }))), [])
   useEffect(() => {
