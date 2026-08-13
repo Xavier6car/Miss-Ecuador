@@ -95,7 +95,16 @@ function PhaseAdminCard({ phase, candidates, phaseState, prevResult, result }) {
   async function updateStatus(newStatus) {
     setBusy(true)
     try {
-      await setPhaseConfig(phase.key, { status: newStatus })
+      const patch = { status: newStatus }
+      // Si se está abriendo la fase y quedó un deadline vencido de antes (p.ej.
+      // de una prueba), hay que limpiarlo: si no, la fase queda "Abierta" en el
+      // panel de admin pero sigue bloqueada para los usuarios.
+      const deadline = phaseState?.deadline
+      if (newStatus === PHASE_STATUS.ABIERTA && deadline && deadline.toMillis() < Date.now()) {
+        patch.deadline = null
+        setDeadlineInput('')
+      }
+      await setPhaseConfig(phase.key, patch)
     } finally {
       setBusy(false)
     }
@@ -165,6 +174,12 @@ function PhaseAdminCard({ phase, candidates, phaseState, prevResult, result }) {
             Guardar
           </button>
         </div>
+        {status === PHASE_STATUS.ABIERTA && phaseState?.deadline && phaseState.deadline.toMillis() < Date.now() && (
+          <p className="text-dim" style={{ marginTop: 6, color: 'var(--gold-soft)' }}>
+            Este deadline ya venció — aunque la fase esté "Abierta", los usuarios la ven bloqueada.
+            Bórralo o ponlo en el futuro y presiona "Guardar".
+          </p>
+        )}
       </div>
 
       <hr style={{ border: 'none', borderTop: '1px solid var(--border)', margin: '16px 0' }} />
