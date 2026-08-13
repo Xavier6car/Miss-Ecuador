@@ -144,12 +144,20 @@ function PhaseAdminCard({ phase, candidates, phaseState, prevResult, result }) {
       )
       return
     }
+    const advancingCount = phase.podium ? 3 : officialPicks.length
+    const eliminatedCount = universe.length - advancingCount
+    if (eliminatedCount > 0) {
+      const ok = window.confirm(
+        `Se van a marcar como "Eliminada" las ${eliminatedCount} candidatas de ${phase.label} que no seleccionaste. Ya no aparecerán disponibles en la siguiente fase. ¿Continuar?`,
+      )
+      if (!ok) return
+    }
     setBusy(true)
     setMsg('')
     try {
       const payload = phase.podium ? { podium } : { officialPicks }
       await publishPhaseResultsAndRecalculate(phase.key, payload)
-      setMsg('Resultados publicados y puntos recalculados para todos los usuarios.')
+      setMsg('Resultados publicados, candidatas eliminadas actualizadas y puntos recalculados para todos los usuarios.')
     } catch (err) {
       setMsg('Error: ' + err.message)
     } finally {
@@ -159,7 +167,7 @@ function PhaseAdminCard({ phase, candidates, phaseState, prevResult, result }) {
 
   async function handleUnpublish() {
     const ok = window.confirm(
-      `¿Anular los resultados de ${phase.label}? Esto borra el resultado oficial de esta fase y pone en 0 los puntos que ganaron todos los jugadores en ella. No se puede deshacer.`,
+      `¿Anular los resultados de ${phase.label}? Esto borra el resultado oficial de esta fase, pone en 0 los puntos que ganaron todos los jugadores en ella y reactiva las candidatas que se habían marcado como eliminadas por este corte. No se puede deshacer.`,
     )
     if (!ok) return
     setBusy(true)
@@ -168,7 +176,7 @@ function PhaseAdminCard({ phase, candidates, phaseState, prevResult, result }) {
       await unpublishPhaseResults(phase.key)
       setOfficialPicks([])
       setPodium({ winner: '', first: '', second: '' })
-      setMsg('Resultados anulados: la fase quedó sin publicar y los puntos de esta fase se pusieron en 0 para todos.')
+      setMsg('Resultados anulados: la fase quedó sin publicar, las candidatas eliminadas se reactivaron y los puntos de esta fase se pusieron en 0 para todos.')
     } catch (err) {
       setMsg('Error: ' + err.message)
     } finally {
