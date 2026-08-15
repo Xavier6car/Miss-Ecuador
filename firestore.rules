@@ -79,6 +79,19 @@ service cloud.firestore {
       }
     }
 
+    // Lectura vía "collection group query" de comments/reactions de TODAS las
+    // candidatas a la vez (la usa el feed "Actividad" del admin, en
+    // lib/data.js: listenRecentComments/listenRecentReactions). Las reglas
+    // anidadas de arriba (match /candidates/{id}/comments/...) SOLO aplican
+    // a consultas normales dentro de una candidata puntual — una collection
+    // group query necesita su propia regla con el comodín {path=**}.
+    match /{path=**}/comments/{commentId} {
+      allow read: if isSignedIn();
+    }
+    match /{path=**}/reactions/{uid} {
+      allow read: if isSignedIn();
+    }
+
     // ---------- phases (config: status/deadline) ----------
     match /phases/{phaseId} {
       allow read: if isSignedIn();
