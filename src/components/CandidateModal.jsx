@@ -1,9 +1,10 @@
 import { useEffect } from 'react'
+import CandidateEngagement from './CandidateEngagement'
 
 /**
- * Vista ampliada de una candidata. Se usa tal cual (solo info) en la página
- * "Candidatas", y con navegación + botón de selección en "Predicción"
- * (pasando total/index/onPrev/onNext/canToggle/onToggle).
+ * Vista ampliada de una candidata. Se usa con `showEngagement` (comentarios
+ * + reacciones) en la página "Candidatas", y con navegación + botón de
+ * selección en "Predicción" (pasando total/index/onPrev/onNext/canToggle/onToggle).
  */
 export default function CandidateModal({
   candidate,
@@ -16,6 +17,7 @@ export default function CandidateModal({
   selected,
   toggleDisabled,
   onToggle,
+  showEngagement,
 }) {
   const hasNav = Boolean(onPrev && onNext && total > 1)
 
@@ -40,6 +42,7 @@ export default function CandidateModal({
 
   if (!candidate) return null
   const eliminated = candidate.status === 'eliminated'
+  const annulled = candidate.status === 'anulada'
 
   function stop(e, fn) {
     e.stopPropagation()
@@ -81,6 +84,8 @@ export default function CandidateModal({
           <span className="candidate-number-badge modal-number-badge">{candidate.number ?? '-'}</span>
           {eliminated ? (
             <span className="candidate-status-tag eliminated">Eliminada</span>
+          ) : annulled ? (
+            <span className="candidate-status-tag annulled">Anulada</span>
           ) : (
             <span className="candidate-status-tag">Activa</span>
           )}
@@ -107,6 +112,8 @@ export default function CandidateModal({
               {selected ? '✓ Quitar de mi predicción' : 'Agregar a mi predicción'}
             </button>
           )}
+
+          {showEngagement && <CandidateEngagement candidateId={candidate.id} />}
         </div>
       </div>
 

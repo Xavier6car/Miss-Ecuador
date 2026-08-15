@@ -83,10 +83,12 @@ export default function Predictions() {
 
   // Universo de candidatas elegibles: en fase 1, todas las activas.
   // En fases siguientes, solo las que el admin marcó como oficialmente avanzadas.
+  // Las anuladas (descalificadas a media competencia) se excluyen siempre,
+  // aunque hayan avanzado oficialmente antes de anularse.
   const universe = useMemo(() => {
-    if (!prevPhase) return candidates.filter((c) => c.status !== 'eliminated')
+    if (!prevPhase) return candidates.filter((c) => c.status !== 'eliminated' && c.status !== 'anulada')
     const officialIds = new Set(prevResults?.officialPicks || [])
-    return candidates.filter((c) => officialIds.has(c.id))
+    return candidates.filter((c) => officialIds.has(c.id) && c.status !== 'anulada')
   }, [candidates, prevPhase, prevResults])
 
   const blockedByPrevPhase = prevPhase && !prevResults
@@ -265,16 +267,20 @@ export default function Predictions() {
                     selected={Boolean(slot)}
                     assignedLabel={slot ? PODIUM_LABELS[slot] : null}
                     onClick={() => assignNext(c.id)}
+                    onExpand={() => openViewer(c.id)}
                   />
                 )
               }
               const selected = picks.includes(c.id)
+              const disabled = !selected && picks.length >= phase.pickCount
               return (
                 <PoolCard
                   key={c.id}
                   candidate={c}
                   selected={selected}
-                  onClick={() => openViewer(c.id)}
+                  disabled={disabled}
+                  onClick={() => togglePick(c.id)}
+                  onExpand={() => openViewer(c.id)}
                 />
               )
             })}
@@ -287,7 +293,7 @@ export default function Predictions() {
         </>
       )}
 
-      {!phase.podium && viewingCandidate && (
+      {viewingCandidate && (
         <CandidateModal
           candidate={viewingCandidate}
           total={universe.length}
@@ -295,10 +301,13 @@ export default function Predictions() {
           onPrev={showPrevCandidate}
           onNext={showNextCandidate}
           onClose={closeViewer}
-          canToggle={!isLocked}
-          selected={picks.includes(viewingCandidate.id)}
+          canToggle={!phase.podium && !isLocked}
+          selected={!phase.podium && picks.includes(viewingCandidate.id)}
           toggleDisabled={
-            !isLocked && !picks.includes(viewingCandidate.id) && picks.length >= phase.pickCount
+            !phase.podium &&
+            !isLocked &&
+            !picks.includes(viewingCandidate.id) &&
+            picks.length >= phase.pickCount
           }
           onToggle={() => togglePick(viewingCandidate.id)}
         />
