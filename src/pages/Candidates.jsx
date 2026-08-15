@@ -169,13 +169,15 @@ export default function Candidates({ embedded = false }) {
           <div>
             <h1 className="page-title">Candidatas</h1>
             <p className="page-subtitle">
-              {candidates.length} de 26 candidatas cargadas
+              {candidates.length} candidata{candidates.length === 1 ? '' : 's'} cargada{candidates.length === 1 ? '' : 's'}
               {candidates.some((c) => c.status === 'eliminated' || c.status === 'anulada') &&
                 ' · las eliminadas y anuladas aparecen atenuadas'}
             </p>
           </div>
         ) : (
-          <p className="text-dim">{candidates.length} de 26 candidatas cargadas</p>
+          <p className="text-dim">
+            {candidates.length} candidata{candidates.length === 1 ? '' : 's'} cargada{candidates.length === 1 ? '' : 's'}
+          </p>
         )}
         {canManageCandidates && (
           <div className="flex gap-8 candidates-actions" style={{ flexWrap: 'wrap' }}>
@@ -186,7 +188,7 @@ export default function Candidates({ embedded = false }) {
             )}
             {candidates.length > 0 && (
               <button className="btn" disabled={renumbering} onClick={handleRenumber}>
-                {renumbering ? 'Renumerando...' : 'Renumerar correlativo (1-26)'}
+                {renumbering ? 'Renumerando...' : `Renumerar correlativo (1-${candidates.length})`}
               </button>
             )}
             <button className="btn btn-primary" onClick={startNew}>
