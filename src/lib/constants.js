@@ -96,3 +96,16 @@ export function nextPhase(phaseKey) {
   if (!phase) return null
   return phaseByOrder(phase.order + 1)
 }
+
+/**
+ * Descripción de una fase para mostrar en pantalla. En Fase 1 el número de
+ * candidatas totales cambia con el tiempo (bajas, descalificaciones), así
+ * que se arma con el conteo real en vez de dejarlo fijo en el texto — para
+ * no repetir el bug de "sigue diciendo 26 aunque ya no sean 26".
+ */
+export function getPhaseDescription(phase, totalCandidates) {
+  if (phase.key === 'phase1' && totalCandidates > 0) {
+    return `Elige 15 de las ${totalCandidates} candidatas que crees pasarán al corte.`
+  }
+  return phase.description
+}
