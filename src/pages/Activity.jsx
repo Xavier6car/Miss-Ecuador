@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
-import { listenCandidates, listenRecentComments, listenRecentReactions } from '../../lib/data'
-import { REACTIONS } from '../../lib/constants'
+import { listenCandidates, listenRecentComments, listenRecentReactions } from '../lib/data'
+import { REACTIONS } from '../lib/constants'
 
 function candidateLabel(candidatesById, candidateId) {
   const c = candidatesById.get(candidateId)
@@ -23,8 +23,9 @@ function millisOf(ts) {
 }
 
 /** Feed de actividad de todos los jugadores (comentarios + reacciones) en
- * todas las candidatas, más reciente primero. Solo para admin/colaborador. */
-export default function AdminActivity() {
+ * todas las candidatas, más reciente primero. Visible para cualquier
+ * jugador registrado. */
+export default function Activity() {
   const [candidates, setCandidates] = useState([])
   const [comments, setComments] = useState([])
   const [reactions, setReactions] = useState([])
@@ -57,36 +58,38 @@ export default function AdminActivity() {
   }, [comments, reactions, reactionByKey])
 
   return (
-    <div className="card">
-      <h3 style={{ marginBottom: 4 }}>Actividad de los jugadores</h3>
-      <p className="text-dim" style={{ marginTop: 0 }}>
+    <div className="container">
+      <h1 className="page-title">Actividad</h1>
+      <p className="page-subtitle">
         Comentarios y reacciones de todos los jugadores en todas las candidatas, más reciente primero.
       </p>
 
-      {feed.length === 0 && (
-        <p className="text-dim" style={{ fontSize: 13 }}>
-          Todavía no hay comentarios ni reacciones de los jugadores.
-        </p>
-      )}
+      <div className="card">
+        {feed.length === 0 && (
+          <p className="text-dim" style={{ fontSize: 13 }}>
+            Todavía no hay comentarios ni reacciones de los jugadores.
+          </p>
+        )}
 
-      <div className="comment-list" style={{ maxHeight: 'none' }}>
-        {feed.map((item) => (
-          <div className="comment-item" key={item.key}>
-            <div className="comment-item-head">
-              <span className="comment-author">{item.userName}</span>
-              <span className="text-dim" style={{ fontSize: 11 }}>{formatWhen(item.when)}</span>
+        <div className="comment-list" style={{ maxHeight: 'none' }}>
+          {feed.map((item) => (
+            <div className="comment-item" key={item.key}>
+              <div className="comment-item-head">
+                <span className="comment-author">{item.userName}</span>
+                <span className="text-dim" style={{ fontSize: 11 }}>{formatWhen(item.when)}</span>
+              </div>
+              {item.kind === 'comment' ? (
+                <p className="comment-text">
+                  comentó en <strong>{candidateLabel(candidatesById, item.candidateId)}</strong>: “{item.text}”
+                </p>
+              ) : (
+                <p className="comment-text">
+                  reaccionó {item.emoji} a <strong>{candidateLabel(candidatesById, item.candidateId)}</strong>
+                </p>
+              )}
             </div>
-            {item.kind === 'comment' ? (
-              <p className="comment-text">
-                comentó en <strong>{candidateLabel(candidatesById, item.candidateId)}</strong>: “{item.text}”
-              </p>
-            ) : (
-              <p className="comment-text">
-                reaccionó {item.emoji} a <strong>{candidateLabel(candidatesById, item.candidateId)}</strong>
-              </p>
-            )}
-          </div>
-        ))}
+          ))}
+        </div>
       </div>
     </div>
   )
