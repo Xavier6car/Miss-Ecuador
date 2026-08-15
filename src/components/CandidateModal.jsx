@@ -1,23 +1,63 @@
 import { useEffect } from 'react'
 
-export default function CandidateModal({ candidate, onClose }) {
+/**
+ * Vista ampliada de una candidata. Se usa tal cual (solo info) en la página
+ * "Candidatas", y con navegación + botón de selección en "Predicción"
+ * (pasando total/index/onPrev/onNext/canToggle/onToggle).
+ */
+export default function CandidateModal({
+  candidate,
+  onClose,
+  total,
+  index,
+  onPrev,
+  onNext,
+  canToggle,
+  selected,
+  toggleDisabled,
+  onToggle,
+}) {
+  const hasNav = Boolean(onPrev && onNext && total > 1)
+
   useEffect(() => {
     function onKey(e) {
       if (e.key === 'Escape') onClose()
+      if (hasNav && e.key === 'ArrowLeft') onPrev()
+      if (hasNav && e.key === 'ArrowRight') onNext()
     }
     document.addEventListener('keydown', onKey)
+    // Bloquea también el arrastre táctil de la página de atrás, no solo el scroll.
+    const prevOverflow = document.body.style.overflow
+    const prevTouchAction = document.body.style.touchAction
     document.body.style.overflow = 'hidden'
+    document.body.style.touchAction = 'none'
     return () => {
       document.removeEventListener('keydown', onKey)
-      document.body.style.overflow = ''
+      document.body.style.overflow = prevOverflow
+      document.body.style.touchAction = prevTouchAction
     }
-  }, [onClose])
+  }, [onClose, onPrev, onNext, hasNav])
 
   if (!candidate) return null
   const eliminated = candidate.status === 'eliminated'
 
+  function stop(e, fn) {
+    e.stopPropagation()
+    fn()
+  }
+
   return (
     <div className="modal-backdrop" onClick={onClose}>
+      {hasNav && (
+        <button
+          className="modal-nav modal-nav-prev"
+          onClick={(e) => stop(e, onPrev)}
+          aria-label="Candidata anterior"
+        >
+          ‹
+        </button>
+      )}
+
       <div className="modal-card" onClick={(e) => e.stopPropagation()}>
         <button className="modal-close" onClick={onClose} aria-label="Cerrar">
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -50,8 +90,35 @@ export default function CandidateModal({ candidate, onClose }) {
           <h2 style={{ margin: '0 0 2px' }}>{candidate.name}</h2>
           <p className="text-dim" style={{ margin: '0 0 12px' }}>{candidate.province}</p>
           {candidate.bio && <p style={{ margin: 0, lineHeight: 1.6 }}>{candidate.bio}</p>}
+
+          {hasNav && (
+            <p className="text-dim" style={{ marginTop: 12, fontSize: 12 }}>
+              {index + 1} / {total}
+            </p>
+          )}
+
+          {canToggle && (
+            <button
+              className={`btn btn-primary modal-toggle-btn${selected ? ' selected' : ''}`}
+              disabled={toggleDisabled}
+              title={toggleDisabled ? 'Ya elegiste el máximo de candidatas — quita una para agregar esta.' : undefined}
+              onClick={onToggle}
+            >
+              {selected ? '✓ Quitar de mi predicción' : 'Agregar a mi predicción'}
+            </button>
+          )}
         </div>
       </div>
+
+      {hasNav && (
+        <button
+          className="modal-nav modal-nav-next"
+          onClick={(e) => stop(e, onNext)}
+          aria-label="Siguiente candidata"
+        >
+          ›
+        </button>
+      )}
     </div>
   )
 }

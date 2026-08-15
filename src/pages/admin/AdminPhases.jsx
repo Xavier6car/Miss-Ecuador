@@ -9,6 +9,7 @@ import {
   publishPhaseResultsAndRecalculate,
   unpublishPhaseResults,
   ensurePhaseDocs,
+  openNextPhase,
 } from '../../lib/data'
 import { PoolCard } from '../../components/CandidateCard'
 
@@ -119,6 +120,10 @@ function PhaseAdminCard({ phase, candidates, phaseState, prevResult, result }) {
         setDeadlineInput('')
       }
       await setPhaseConfig(phase.key, patch)
+      // Al cerrar esta fase se abre automáticamente SOLO la siguiente.
+      if (newStatus === PHASE_STATUS.CERRADA) {
+        await openNextPhase(phase.key)
+      }
     } finally {
       setBusy(false)
     }
@@ -170,6 +175,8 @@ function PhaseAdminCard({ phase, candidates, phaseState, prevResult, result }) {
     try {
       const payload = phase.podium ? { podium } : { officialPicks }
       await publishPhaseResultsAndRecalculate(phase.key, payload)
+      // Publicar resultados también cierra la fase: abre automáticamente la siguiente.
+      await openNextPhase(phase.key)
       setMsg('Resultados publicados, candidatas eliminadas actualizadas y puntos recalculados para todos los usuarios.')
     } catch (err) {
       setMsg('Error: ' + err.message)
@@ -216,25 +223,30 @@ function PhaseAdminCard({ phase, candidates, phaseState, prevResult, result }) {
         </button>
       </div>
 
-      <div className="form-row" style={{ maxWidth: 320 }}>
-        <label>Deadline</label>
-        <div className="flex gap-8">
-          <input
-            type="datetime-local"
-            value={deadlineInput}
-            onChange={(e) => setDeadlineInput(e.target.value)}
-          />
-          <button className="btn btn-sm" disabled={busy} onClick={saveDeadline}>
-            Guardar
-          </button>
-        </div>
-        {status === PHASE_STATUS.ABIERTA && phaseState?.deadline && phaseState.deadline.toMillis() < Date.now() && (
-          <p className="text-dim" style={{ marginTop: 6, color: 'var(--gold-soft)' }}>
-            Este deadline ya venció — aunque la fase esté "Abierta", los usuarios la ven bloqueada.
-            Bórralo o ponlo en el futuro y presiona "Guardar".
+      {phase.order === 1 && (
+        <div className="form-row" style={{ maxWidth: 320 }}>
+          <label>Deadline (temporizador — solo Fase 1)</label>
+          <div className="flex gap-8">
+            <input
+              type="datetime-local"
+              value={deadlineInput}
+              onChange={(e) => setDeadlineInput(e.target.value)}
+            />
+            <button className="btn btn-sm" disabled={busy} onClick={saveDeadline}>
+              Guardar
+            </button>
+          </div>
+          {status === PHASE_STATUS.ABIERTA && phaseState?.deadline && phaseState.deadline.toMillis() < Date.now() && (
+            <p className="text-dim" style={{ marginTop: 6, color: 'var(--gold-soft)' }}>
+              Este deadline ya venció — aunque la fase esté "Abierta", los usuarios la ven bloqueada.
+              Bórralo o ponlo en el futuro y presiona "Guardar".
+            </p>
+          )}
+          <p className="text-dim" style={{ margin: 0, fontSize: 12 }}>
+            Al cerrar esta fase se abrirá automáticamente la Fase 2, y así sucesivamente con el resto.
           </p>
-        )}
-      </div>
+        </div>
+      )}
 
       <hr style={{ border: 'none', borderTop: '1px solid var(--border)', margin: '16px 0' }} />
 

@@ -13,7 +13,7 @@ import {
   serverTimestamp,
 } from 'firebase/firestore'
 import { db } from '../firebase'
-import { PHASES, PHASE_STATUS, getPhase, previousPhase } from './constants'
+import { PHASES, PHASE_STATUS, getPhase, previousPhase, nextPhase } from './constants'
 import { scorePrediction, sumTotalPoints } from './scoring'
 
 // ---------- Candidatas ----------
@@ -122,6 +122,17 @@ export async function setPhaseConfig(phaseKey, { status, deadline }) {
   // setDoc con merge (en vez de updateDoc) porque el documento de la fase
   // puede no existir todavía la primera vez que el admin la abre.
   await setDoc(ref, patch, { merge: true })
+}
+
+/**
+ * Solo la Fase 1 tiene temporizador/deadline manual. Al cerrar (o publicar
+ * resultados de) una fase, se abre automáticamente SOLO la fase siguiente,
+ * nunca todas las restantes de una vez.
+ */
+export async function openNextPhase(phaseKey) {
+  const next = nextPhase(phaseKey)
+  if (!next) return
+  await setPhaseConfig(next.key, { status: PHASE_STATUS.ABIERTA })
 }
 
 // ---------- Resultados oficiales por fase ----------

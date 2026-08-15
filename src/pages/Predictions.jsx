@@ -11,6 +11,7 @@ import {
 } from '../lib/data'
 import { scorePrediction } from '../lib/scoring'
 import { PoolCard } from '../components/CandidateCard'
+import CandidateModal from '../components/CandidateModal'
 import Countdown from '../components/Countdown'
 
 const PODIUM_ORDER = ['winner', 'first', 'second']
@@ -35,6 +36,7 @@ export default function Predictions() {
   const [podium, setPodium] = useState({ winner: '', first: '', second: '' })
   const [saving, setSaving] = useState(false)
   const [message, setMessage] = useState('')
+  const [viewingIndex, setViewingIndex] = useState(null)
 
   const phase = PHASES.find((p) => p.key === phaseKey) || PHASES[0]
   const prevPhase = previousPhase(phase.key)
@@ -51,6 +53,7 @@ export default function Predictions() {
     setPrediction(null)
     setPicks([])
     setPodium({ winner: '', first: '', second: '' })
+    setViewingIndex(null)
   }
 
   useEffect(() => listenCandidates(setCandidates), [])
@@ -114,6 +117,25 @@ export default function Predictions() {
     setPodium((p) => ({ ...p, [key]: '' }))
   }
 
+  function openViewer(id) {
+    const idx = universe.findIndex((c) => c.id === id)
+    if (idx >= 0) setViewingIndex(idx)
+  }
+
+  function closeViewer() {
+    setViewingIndex(null)
+  }
+
+  function showPrevCandidate() {
+    setViewingIndex((i) => (i === null || universe.length === 0 ? i : (i - 1 + universe.length) % universe.length))
+  }
+
+  function showNextCandidate() {
+    setViewingIndex((i) => (i === null || universe.length === 0 ? i : (i + 1) % universe.length))
+  }
+
+  const viewingCandidate = viewingIndex !== null ? universe[viewingIndex] : null
+
   async function handleSubmit() {
     setMessage('')
     setSaving(true)
@@ -173,7 +195,7 @@ export default function Predictions() {
               </svg>
               Cerrado
             </>
-          ) : phaseState?.deadline ? (
+          ) : phase.order === 1 && phaseState?.deadline ? (
             <>
               <Countdown deadline={phaseState.deadline} /> restantes
             </>
@@ -247,14 +269,12 @@ export default function Predictions() {
                 )
               }
               const selected = picks.includes(c.id)
-              const disabled = !selected && picks.length >= phase.pickCount
               return (
                 <PoolCard
                   key={c.id}
                   candidate={c}
                   selected={selected}
-                  disabled={disabled}
-                  onClick={() => togglePick(c.id)}
+                  onClick={() => openViewer(c.id)}
                 />
               )
             })}
@@ -265,6 +285,23 @@ export default function Predictions() {
             </div>
           )}
         </>
+      )}
+
+      {!phase.podium && viewingCandidate && (
+        <CandidateModal
+          candidate={viewingCandidate}
+          total={universe.length}
+          index={viewingIndex}
+          onPrev={showPrevCandidate}
+          onNext={showNextCandidate}
+          onClose={closeViewer}
+          canToggle={!isLocked}
+          selected={picks.includes(viewingCandidate.id)}
+          toggleDisabled={
+            !isLocked && !picks.includes(viewingCandidate.id) && picks.length >= phase.pickCount
+          }
+          onToggle={() => togglePick(viewingCandidate.id)}
+        />
       )}
 
       {scoreInfo && (
