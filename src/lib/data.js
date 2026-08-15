@@ -1,9 +1,11 @@
 import {
   collection,
+  collectionGroup,
   doc,
   onSnapshot,
   query,
   orderBy,
+  limit,
   setDoc,
   updateDoc,
   deleteDoc,
@@ -511,4 +513,36 @@ export async function toggleMyReaction(candidateId, uid, emojiKey, userName) {
     return
   }
   await setDoc(ref, { emojiKey, userName: userName || 'Usuario', updatedAt: serverTimestamp() })
+}
+
+/**
+ * Feed de actividad para el panel de admin ("Actividad"): los últimos
+ * comentarios/reacciones de TODOS los jugadores en TODAS las candidatas,
+ * usando collection group queries (leen la subcolección con ese nombre sin
+ * importar de qué candidata cuelgue). `candidateId` sale del padre del doc.
+ */
+export function listenRecentComments(callback, max = 150) {
+  const q = query(collectionGroup(db, 'comments'), orderBy('createdAt', 'desc'), limit(max))
+  return onSnapshot(q, (snap) => {
+    callback(
+      snap.docs.map((d) => ({
+        id: d.id,
+        candidateId: d.ref.parent.parent?.id || null,
+        ...d.data(),
+      })),
+    )
+  })
+}
+
+export function listenRecentReactions(callback, max = 150) {
+  const q = query(collectionGroup(db, 'reactions'), orderBy('updatedAt', 'desc'), limit(max))
+  return onSnapshot(q, (snap) => {
+    callback(
+      snap.docs.map((d) => ({
+        id: d.id, // uid de quien reaccionó
+        candidateId: d.ref.parent.parent?.id || null,
+        ...d.data(),
+      })),
+    )
+  })
 }
