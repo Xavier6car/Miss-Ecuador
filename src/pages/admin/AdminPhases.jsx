@@ -10,8 +10,11 @@ import {
   unpublishPhaseResults,
   ensurePhaseDocs,
   openNextPhase,
+  resetGame,
 } from '../../lib/data'
 import { PoolCard } from '../../components/CandidateCard'
+
+const RESET_CONFIRM_PHRASE = 'REINICIAR TODO'
 
 export default function AdminPhases() {
   const [candidates, setCandidates] = useState([])
@@ -75,6 +78,73 @@ export default function AdminPhases() {
           result={results[phase.key]}
         />
       ))}
+
+      <DangerZone />
+    </div>
+  )
+}
+
+function DangerZone() {
+  const [confirmText, setConfirmText] = useState('')
+  const [busy, setBusy] = useState(false)
+  const [msg, setMsg] = useState('')
+
+  const canReset = confirmText.trim() === RESET_CONFIRM_PHRASE
+
+  async function handleReset() {
+    const ok = window.confirm(
+      'Esto va a borrar TODAS las predicciones de TODOS los jugadores y TODOS los resultados ' +
+        'oficiales publicados, poner en 0 los puntos de todos, reactivar a las 26 candidatas y ' +
+        'dejar las 4 fases como recién creadas (Fase 1 abierta, el resto cerradas).\n\n' +
+        'No borra cuentas de usuario ni roles.\n\n' +
+        'Esta acción NO SE PUEDE DESHACER. ¿Reiniciar el juego completo?',
+    )
+    if (!ok) return
+    setBusy(true)
+    setMsg('')
+    try {
+      const result = await resetGame()
+      setConfirmText('')
+      setMsg(
+        `Juego reiniciado: ${result.predictionsDeleted} predicción(es) y ${result.resultsDeleted} ` +
+          `resultado(s) oficial(es) borrados, ${result.usersReset} usuario(s) con puntos en 0, ` +
+          `${result.candidatesReactivated} candidata(s) reactivada(s). Fase 1 quedó abierta y el resto cerradas.`,
+      )
+    } catch (err) {
+      setMsg('Error: ' + err.message)
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  return (
+    <div className="card" style={{ marginTop: 24, borderColor: 'var(--danger-border)' }}>
+      <h3 style={{ color: 'var(--danger-text)', marginBottom: 8 }}>⚠️ Zona de peligro</h3>
+      <p className="text-dim" style={{ marginTop: 0 }}>
+        Reinicia TODO el juego: borra las predicciones de todos los jugadores y los resultados
+        oficiales publicados, pone los puntos en 0, reactiva a todas las candidatas y deja las
+        fases como recién creadas — como si nunca se hubiera jugado ninguna ronda. Úsalo solo para
+        limpiar datos de prueba antes de arrancar de verdad. No se puede deshacer.
+      </p>
+      <div className="form-row" style={{ maxWidth: 360 }}>
+        <label>
+          Escribe <strong>{RESET_CONFIRM_PHRASE}</strong> para habilitar el botón
+        </label>
+        <input
+          value={confirmText}
+          onChange={(e) => setConfirmText(e.target.value)}
+          placeholder={RESET_CONFIRM_PHRASE}
+        />
+      </div>
+      {msg && <div className="alert alert-success" style={{ marginTop: 4 }}>{msg}</div>}
+      <button
+        className="btn btn-danger"
+        style={{ marginTop: 12 }}
+        disabled={!canReset || busy}
+        onClick={handleReset}
+      >
+        {busy ? 'Reiniciando...' : 'Reiniciar juego completo'}
+      </button>
     </div>
   )
 }

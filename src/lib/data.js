@@ -368,6 +368,86 @@ export async function recalcPointsForPhase(phaseKey) {
   await batch.commit()
 }
 
+function chunk(arr, size) {
+  const out = []
+  for (let i = 0; i < arr.length; i += size) out.push(arr.slice(i, i + size))
+  return out
+}
+
+/**
+ * Reinicio TOTAL del juego (botón "Zona de peligro" en Fases y resultados,
+ * solo admin). Deja todo como si nunca se hubiera jugado ninguna ronda:
+ *
+ * - Borra TODAS las predicciones de TODOS los usuarios.
+ * - Borra TODOS los resultados oficiales publicados (phaseResults).
+ * - Las 4 fases quedan como recién creadas: Fase 1 'abierta' sin deadline,
+ *   el resto 'cerrada'.
+ * - Los puntos (pointsByPhase y totalPoints) de todos los usuarios vuelven a 0.
+ * - Todas las candidatas vuelven a 'active' (se quita 'eliminated'/'anulada').
+ *
+ * NO borra cuentas de usuario, roles, candidatas, ni sus comentarios/reacciones.
+ * No se puede deshacer.
+ */
+export async function resetGame() {
+  const [predictionsSnap, resultsSnap, usersSnap, candidatesSnap] = await Promise.all([
+    getDocs(collection(db, 'predictions')),
+    getDocs(collection(db, 'phaseResults')),
+    getDocs(collection(db, 'users')),
+    getDocs(collection(db, 'candidates')),
+  ])
+
+  const ops = []
+
+  predictionsSnap.docs.forEach((d) => ops.push({ ref: d.ref, type: 'delete' }))
+  resultsSnap.docs.forEach((d) => ops.push({ ref: d.ref, type: 'delete' }))
+
+  PHASES.forEach((phase) => {
+    ops.push({
+      ref: doc(db, 'phases', phase.key),
+      type: 'set',
+      data: {
+        status: phase.order === 1 ? PHASE_STATUS.ABIERTA : PHASE_STATUS.CERRADA,
+        deadline: null,
+        updatedAt: serverTimestamp(),
+      },
+    })
+  })
+
+  let usersReset = 0
+  usersSnap.docs.forEach((d) => {
+    const data = d.data()
+    if ((data.totalPoints || 0) !== 0 || Object.keys(data.pointsByPhase || {}).length > 0) {
+      ops.push({ ref: d.ref, type: 'update', data: { pointsByPhase: {}, totalPoints: 0 } })
+      usersReset++
+    }
+  })
+
+  let candidatesReactivated = 0
+  candidatesSnap.docs.forEach((d) => {
+    if (d.data().status && d.data().status !== CANDIDATE_STATUS.ACTIVE) {
+      ops.push({ ref: d.ref, type: 'update', data: { status: CANDIDATE_STATUS.ACTIVE } })
+      candidatesReactivated++
+    }
+  })
+
+  for (const group of chunk(ops, 450)) {
+    const batch = writeBatch(db)
+    for (const op of group) {
+      if (op.type === 'delete') batch.delete(op.ref)
+      else if (op.type === 'set') batch.set(op.ref, op.data, { merge: true })
+      else batch.update(op.ref, op.data)
+    }
+    await batch.commit()
+  }
+
+  return {
+    predictionsDeleted: predictionsSnap.size,
+    resultsDeleted: resultsSnap.size,
+    usersReset,
+    candidatesReactivated,
+  }
+}
+
 // ---------- Ranking ----------
 
 export function listenRanking(callback) {
