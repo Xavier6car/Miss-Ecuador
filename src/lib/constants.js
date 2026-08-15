@@ -70,3 +70,9 @@ export function previousPhase(phaseKey) {
   if (!phase || phase.order === 1) return null
   return phaseByOrder(phase.order - 1)
 }
+
+export function nextPhase(phaseKey) {
+  const phase = getPhase(phaseKey)
+  if (!phase) return null
+  return phaseByOrder(phase.order + 1)
+}
