@@ -14,6 +14,13 @@ function formatCommentDate(ts) {
   return ts.toDate().toLocaleString('es-EC', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })
 }
 
+function friendlyError(err) {
+  if (err?.code === 'permission-denied') {
+    return 'No se pudo guardar: faltan permisos. Si acabas de activar comentarios/reacciones, avísale al admin del sitio — puede que falte desplegar las reglas de Firestore actualizadas.'
+  }
+  return 'No se pudo guardar: ' + (err?.message || 'error desconocido') + '.'
+}
+
 /** Comentarios + reacciones de una candidata. Se usa dentro del modal de la
  * sección "Candidatas" (no en Predicción, para no distraer al elegir). */
 export default function CandidateEngagement({ candidateId }) {
@@ -23,6 +30,7 @@ export default function CandidateEngagement({ candidateId }) {
   const [text, setText] = useState('')
   const [posting, setPosting] = useState(false)
   const [reacting, setReacting] = useState(false)
+  const [error, setError] = useState('')
 
   useEffect(() => listenCandidateComments(candidateId, setComments), [candidateId])
   useEffect(() => listenCandidateReactions(candidateId, setReactions), [candidateId])
@@ -36,8 +44,11 @@ export default function CandidateEngagement({ candidateId }) {
   async function handleReact(key) {
     if (!profile || reacting) return
     setReacting(true)
+    setError('')
     try {
       await toggleMyReaction(candidateId, profile.id, key, profile.name)
+    } catch (err) {
+      setError(friendlyError(err))
     } finally {
       setReacting(false)
     }
@@ -47,9 +58,12 @@ export default function CandidateEngagement({ candidateId }) {
     e.preventDefault()
     if (!profile || !text.trim() || posting) return
     setPosting(true)
+    setError('')
     try {
       await postCandidateComment(candidateId, text, { uid: profile.id, name: profile.name })
       setText('')
+    } catch (err) {
+      setError(friendlyError(err))
     } finally {
       setPosting(false)
     }
@@ -57,11 +71,18 @@ export default function CandidateEngagement({ candidateId }) {
 
   async function handleDelete(commentId) {
     if (!confirm('¿Borrar este comentario?')) return
-    await deleteCandidateComment(candidateId, commentId)
+    setError('')
+    try {
+      await deleteCandidateComment(candidateId, commentId)
+    } catch (err) {
+      setError(friendlyError(err))
+    }
   }
 
   return (
     <div className="engagement">
+      {error && <div className="alert alert-danger" style={{ marginBottom: 12 }}>{error}</div>}
+
       <div className="reaction-row">
         {REACTIONS.map((r) => (
           <button
