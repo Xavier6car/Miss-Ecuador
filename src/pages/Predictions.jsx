@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
-import { PHASES, PHASE_STATUS, previousPhase } from '../lib/constants'
+import { PHASES, PHASE_STATUS, previousPhase, getPhaseDescription } from '../lib/constants'
 import {
   listenCandidates,
   listenPhases,
@@ -186,7 +186,7 @@ export default function Predictions() {
           <span className="eyebrow">
             {phase.shortLabel} · {phase.label.toUpperCase()}
           </span>
-          <h1 className="phase-heading">{phase.description}</h1>
+          <h1 className="phase-heading">{getPhaseDescription(phase, universe.length)}</h1>
         </div>
         <span className={`countdown-pill${isLocked ? ' locked' : ''}`}>
           {isLocked ? (

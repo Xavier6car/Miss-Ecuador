@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Timestamp } from 'firebase/firestore'
-import { PHASES, PHASE_STATUS, previousPhase } from '../../lib/constants'
+import { PHASES, PHASE_STATUS, previousPhase, getPhaseDescription } from '../../lib/constants'
 import {
   listenCandidates,
   listenPhases,
@@ -94,7 +94,7 @@ function DangerZone() {
   async function handleReset() {
     const ok = window.confirm(
       'Esto va a borrar TODAS las predicciones de TODOS los jugadores y TODOS los resultados ' +
-        'oficiales publicados, poner en 0 los puntos de todos, reactivar a las 26 candidatas y ' +
+        'oficiales publicados, poner en 0 los puntos de todos, reactivar a todas las candidatas y ' +
         'dejar las 4 fases como recién creadas (Fase 1 abierta, el resto cerradas).\n\n' +
         'No borra cuentas de usuario ni roles.\n\n' +
         'Esta acción NO SE PUEDE DESHACER. ¿Reiniciar el juego completo?',
@@ -307,7 +307,7 @@ function PhaseAdminCard({ phase, candidates, phaseState, prevResult, result }) {
       <div className="flex-between">
         <div>
           <h3 style={{ marginBottom: 2 }}>{phase.shortLabel} · {phase.label}</h3>
-          <p className="text-dim" style={{ margin: 0 }}>{phase.description}</p>
+          <p className="text-dim" style={{ margin: 0 }}>{getPhaseDescription(phase, universe.length)}</p>
         </div>
         <StatusBadge status={status} />
       </div>
