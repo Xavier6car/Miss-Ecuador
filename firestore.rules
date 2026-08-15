@@ -56,6 +56,27 @@ service cloud.firestore {
     match /candidates/{candidateId} {
       allow read: if isSignedIn();
       allow write: if canManageCandidates();
+
+      // Comentarios de usuarios sobre una candidata (sección Candidatas).
+      match /comments/{commentId} {
+        allow read: if isSignedIn();
+        allow create: if isSignedIn()
+          && request.resource.data.userId == request.auth.uid
+          && request.resource.data.text is string
+          && request.resource.data.text.size() > 0
+          && request.resource.data.text.size() <= 500;
+        // El autor puede borrar su propio comentario; admin/colaborador puede
+        // borrar cualquiera (moderación). Nadie puede editar uno ya publicado.
+        allow delete: if isSignedIn() && (resource.data.userId == request.auth.uid || canManageCandidates());
+        allow update: if false;
+      }
+
+      // Reacción del usuario a una candidata: un doc por usuario (id = uid),
+      // así solo puede tener una reacción activa a la vez.
+      match /reactions/{uid} {
+        allow read: if isSignedIn();
+        allow write: if isSignedIn() && request.auth.uid == uid;
+      }
     }
 
     // ---------- phases (config: status/deadline) ----------
@@ -74,14 +95,20 @@ service cloud.firestore {
     match /predictions/{predictionId} {
       allow read: if isSignedIn() && (resource.data.userId == request.auth.uid || isAdmin());
 
-      allow create, update: if isSignedIn()
+      // El admin también puede escribir aquí: lo usa annulCandidate() para
+      // quitar de las predicciones de CUALQUIER usuario a una candidata
+      // anulada a media competencia (libera el cupo, sin tocar fases ya
+      // publicadas — ver lib/data.js).
+      allow create, update: if isAdmin() || (
+        isSignedIn()
         && request.resource.data.userId == request.auth.uid
         && predictionId == request.auth.uid + '_' + request.resource.data.phase
         && phaseIsOpen(request.resource.data.phase)
         && (
           request.resource.data.phase == 'phase4'
           || request.resource.data.picks.size() <= pickLimit(request.resource.data.phase)
-        );
+        )
+      );
 
       allow delete: if false;
     }

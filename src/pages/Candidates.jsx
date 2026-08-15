@@ -6,6 +6,8 @@ import {
   deleteCandidate,
   importCandidates,
   renumberCandidatesSequential,
+  annulCandidate,
+  reactivateCandidate,
 } from '../lib/data'
 import { CANDIDATES_SEED } from '../lib/candidatesSeed'
 import { uploadCandidatePhoto } from '../lib/storage'
@@ -15,7 +17,7 @@ import CandidateModal from '../components/CandidateModal'
 const emptyForm = { number: '', name: '', province: '', photoUrl: '', bio: '', status: 'active' }
 
 export default function Candidates({ embedded = false }) {
-  const { profile, canManageCandidates } = useAuth()
+  const { profile, canManageCandidates, isAdmin } = useAuth()
   const [candidates, setCandidates] = useState([])
   const [editing, setEditing] = useState(null) // candidate id or 'new'
   const [form, setForm] = useState(emptyForm)
@@ -28,6 +30,8 @@ export default function Candidates({ embedded = false }) {
   const [search, setSearch] = useState('')
   const [province, setProvince] = useState('Todas')
   const [viewing, setViewing] = useState(null)
+  const [annullingId, setAnnullingId] = useState(null)
+  const [annulMsg, setAnnulMsg] = useState('')
 
   useEffect(() => listenCandidates(setCandidates), [])
 
@@ -95,6 +99,41 @@ export default function Candidates({ embedded = false }) {
     await deleteCandidate(id)
   }
 
+  async function handleAnnul(candidate) {
+    const ok = confirm(
+      `¿Anular a ${candidate.name}? Se descalifica de última hora, fuera del corte normal de fase:\n\n` +
+        '• Deja de estar disponible para elegir en cualquier fase de aquí en adelante.\n' +
+        '• A quien ya la había elegido en una fase todavía no publicada se le libera ese cupo para que elija otra candidata — no cuenta como acierto ni como fallo.\n' +
+        '• Las fases que ya se publicaron NO se tocan (el puntaje ya otorgado con ella se mantiene).\n\n' +
+        'Puedes reactivarla después, pero los cupos que se liberen ahora no se restauran solos.',
+    )
+    if (!ok) return
+    setAnnullingId(candidate.id)
+    setAnnulMsg('')
+    try {
+      const touched = await annulCandidate(candidate.id, { uid: profile.id, name: profile.name })
+      setAnnulMsg(
+        touched > 0
+          ? `${candidate.name} fue anulada. Se actualizaron ${touched} predicción(es) para liberar su cupo.`
+          : `${candidate.name} fue anulada.`,
+      )
+    } finally {
+      setAnnullingId(null)
+    }
+  }
+
+  async function handleReactivate(candidate) {
+    if (!confirm(`¿Reactivar a ${candidate.name}? Volverá a estar disponible para elegir.`)) return
+    setAnnullingId(candidate.id)
+    setAnnulMsg('')
+    try {
+      await reactivateCandidate(candidate.id, { uid: profile.id, name: profile.name })
+      setAnnulMsg(`${candidate.name} fue reactivada.`)
+    } finally {
+      setAnnullingId(null)
+    }
+  }
+
   async function handleRenumber() {
     if (!confirm('Esto va a renumerar todas las candidatas de forma correlativa (1, 2, 3...) según su orden actual. ¿Continuar?'))
       return
@@ -131,7 +170,8 @@ export default function Candidates({ embedded = false }) {
             <h1 className="page-title">Candidatas</h1>
             <p className="page-subtitle">
               {candidates.length} de 26 candidatas cargadas
-              {candidates.some((c) => c.status === 'eliminated') && ' · las eliminadas aparecen atenuadas'}
+              {candidates.some((c) => c.status === 'eliminated' || c.status === 'anulada') &&
+                ' · las eliminadas y anuladas aparecen atenuadas'}
             </p>
           </div>
         ) : (
@@ -157,6 +197,7 @@ export default function Candidates({ embedded = false }) {
       </div>
 
       {renumberMsg && <div className="alert alert-success">{renumberMsg}</div>}
+      {annulMsg && <div className="alert alert-success">{annulMsg}</div>}
 
       {editing && (
         <div className="card" style={{ marginBottom: 24 }}>
@@ -221,8 +262,13 @@ export default function Candidates({ embedded = false }) {
                 <label>Estado</label>
                 <select value={form.status} onChange={(e) => setForm({ ...form, status: e.target.value })}>
                   <option value="active">Activa</option>
-                  <option value="eliminated">Eliminada</option>
+                  <option value="eliminated">Eliminada (no avanzó en un corte de fase)</option>
+                  <option value="anulada">Anulada / descalificada</option>
                 </select>
+                <p className="text-dim" style={{ fontSize: 11, margin: 0 }}>
+                  Para anular a media competencia y liberar automáticamente el cupo de quienes ya la
+                  eligieron, mejor usa el botón "Anular candidata" de su tarjeta en vez de este campo.
+                </p>
               </div>
             )}
             <div className="flex gap-8">
@@ -286,6 +332,26 @@ export default function Candidates({ embedded = false }) {
                 Editar
               </button>
             )}
+            {isAdmin && c.status === 'anulada' && (
+              <button
+                className="btn btn-sm"
+                style={{ width: '100%', marginTop: 4 }}
+                disabled={annullingId === c.id}
+                onClick={() => handleReactivate(c)}
+              >
+                {annullingId === c.id ? 'Reactivando...' : 'Reactivar candidata'}
+              </button>
+            )}
+            {isAdmin && c.status !== 'anulada' && (
+              <button
+                className="btn btn-sm btn-danger"
+                style={{ width: '100%', marginTop: 4 }}
+                disabled={annullingId === c.id}
+                onClick={() => handleAnnul(c)}
+              >
+                {annullingId === c.id ? 'Anulando...' : 'Anular candidata'}
+              </button>
+            )}
             {c.lastEditedByName && (
               <p className="text-dim" style={{ fontSize: 11, marginTop: 4 }}>
                 Editado por {c.lastEditedByName}
@@ -305,7 +371,7 @@ export default function Candidates({ embedded = false }) {
         <div className="alert alert-info">Ninguna candidata coincide con la búsqueda.</div>
       )}
 
-      {viewing && <CandidateModal candidate={viewing} onClose={() => setViewing(null)} />}
+      {viewing && <CandidateModal candidate={viewing} onClose={() => setViewing(null)} showEngagement />}
     </div>
   )
 }

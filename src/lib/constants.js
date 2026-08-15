@@ -57,6 +57,26 @@ export const ROLES = {
   USUARIO: 'usuario',
 }
 
+// Reacciones disponibles en la sección "Candidatas". `key` es lo que se
+// guarda en Firestore (candidates/{id}/reactions/{uid}.emojiKey); `emoji`
+// es solo para mostrar, así se puede cambiar el glifo sin migrar datos.
+export const REACTIONS = [
+  { key: 'heart', emoji: '❤️', label: 'Me encanta' },
+  { key: 'fire', emoji: '🔥', label: 'Está en fuego' },
+  { key: 'clap', emoji: '👏', label: 'Aplausos' },
+  { key: 'love', emoji: '😍', label: 'Enamorado/a' },
+]
+
+// `active`: compite normalmente.
+// `eliminated`: no avanzó en un corte normal de fase (lo pone el sistema al publicar resultados).
+// `anulada`: se descalificó/retiró a media competencia (acción manual del admin, fuera del corte
+// normal) — ver `annulCandidate` en lib/data.js.
+export const CANDIDATE_STATUS = {
+  ACTIVE: 'active',
+  ELIMINATED: 'eliminated',
+  ANULADA: 'anulada',
+}
+
 export function getPhase(phaseKey) {
   return PHASES.find((p) => p.key === phaseKey)
 }

@@ -16,9 +16,11 @@ function PhotoOrPlaceholder({ candidate, className }) {
 /** Tarjeta de la página "Candidatas" — con marco propio, número y estado. */
 export function CandidateCard({ candidate, showStatus, onClick }) {
   const eliminated = candidate.status === 'eliminated'
+  const annulled = candidate.status === 'anulada'
+  const dimmed = (eliminated || annulled) && showStatus
   return (
     <div className={`candidate-card${onClick ? ' clickable' : ''}`} onClick={onClick} role={onClick ? 'button' : undefined} tabIndex={onClick ? 0 : undefined}>
-      <div className="candidate-photo-wrap" style={eliminated && showStatus ? { filter: 'grayscale(0.85) brightness(0.7)' } : undefined}>
+      <div className="candidate-photo-wrap" style={dimmed ? { filter: 'grayscale(0.85) brightness(0.7)' } : undefined}>
         <PhotoOrPlaceholder candidate={candidate} className="candidate-photo" />
         <span className="candidate-number-badge">{candidate.number ?? '-'}</span>
         {showStatus && eliminated && (
@@ -27,7 +29,13 @@ export function CandidateCard({ candidate, showStatus, onClick }) {
             <span className="candidate-status-tag eliminated">Eliminada</span>
           </>
         )}
-        {showStatus && !eliminated && <span className="candidate-status-tag">Activa</span>}
+        {showStatus && annulled && (
+          <>
+            <div className="candidate-eliminated-scrim" />
+            <span className="candidate-status-tag annulled">Anulada</span>
+          </>
+        )}
+        {showStatus && !eliminated && !annulled && <span className="candidate-status-tag">Activa</span>}
       </div>
       <div>
         <div className="candidate-name">{candidate.name}</div>
@@ -37,8 +45,11 @@ export function CandidateCard({ candidate, showStatus, onClick }) {
   )
 }
 
-/** Tarjeta de la página "Predicción" — seleccionable, con check/asignación. */
-export function PoolCard({ candidate, selected, disabled, assignedLabel, onClick }) {
+/** Tarjeta de la página "Predicción" — seleccionable, con check/asignación.
+ * Un tap en la tarjeta selecciona/deselecciona directamente. Si se pasa
+ * `onExpand`, aparece además un botón de "ampliar" que abre la vista grande
+ * (con navegación entre todas las candidatas) sin afectar la selección. */
+export function PoolCard({ candidate, selected, disabled, assignedLabel, onClick, onExpand }) {
   return (
     <div
       className={`pool-card${disabled ? ' disabled' : ''}`}
@@ -50,6 +61,24 @@ export function PoolCard({ candidate, selected, disabled, assignedLabel, onClick
       <div className={`pool-photo-wrap${selected ? ' selected' : ''}`}>
         <PhotoOrPlaceholder candidate={candidate} className="candidate-photo" />
         <span className="pool-number-badge">{candidate.number ?? '-'}</span>
+        {onExpand && (
+          <button
+            type="button"
+            className="pool-expand-btn"
+            onClick={(e) => {
+              e.stopPropagation()
+              onExpand()
+            }}
+            aria-label="Ver en grande"
+          >
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M8 3H3v5" />
+              <path d="M16 3h5v5" />
+              <path d="M21 16v5h-5" />
+              <path d="M3 16v5h5" />
+            </svg>
+          </button>
+        )}
         {selected && !assignedLabel && (
           <>
             <div className="pool-selected-ring" />

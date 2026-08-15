@@ -99,11 +99,30 @@ function PhaseAdminCard({ phase, candidates, phaseState, prevResult, result }) {
   }, [result])
 
   const prevPhase = previousPhase(phase.key)
+  // Las anuladas (descalificadas a media competencia) nunca son elegibles
+  // como resultado oficial, aunque hayan avanzado antes de anularse.
   const universe = useMemo(() => {
-    if (!prevPhase) return candidates
+    const notAnnulled = (c) => c.status !== 'anulada'
+    if (!prevPhase) return candidates.filter(notAnnulled)
     const ids = new Set(prevResult?.officialPicks || [])
-    return candidates.filter((c) => ids.has(c.id))
+    return candidates.filter((c) => ids.has(c.id) && notAnnulled(c))
   }, [candidates, prevPhase, prevResult])
+
+  // Por si se anuló a una candidata después de que ya estaba marcada en la
+  // selección local (antes de publicar): se limpia sola de aquí. Se espera a
+  // que las candidatas ya hayan cargado, para no vaciar la selección
+  // restaurada de `result` mientras el snapshot de candidatas todavía no llega.
+  useEffect(() => {
+    if (candidates.length === 0) return
+    const universeIds = new Set(universe.map((c) => c.id))
+    setOfficialPicks((current) => current.filter((id) => universeIds.has(id)))
+    setPodium((current) => ({
+      winner: universeIds.has(current.winner) ? current.winner : '',
+      first: universeIds.has(current.first) ? current.first : '',
+      second: universeIds.has(current.second) ? current.second : '',
+    }))
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [universe, candidates.length])
 
   const status = phaseState?.status || PHASE_STATUS.CERRADA
 
@@ -173,7 +192,16 @@ function PhaseAdminCard({ phase, candidates, phaseState, prevResult, result }) {
     setBusy(true)
     setMsg('')
     try {
-      const payload = phase.podium ? { podium } : { officialPicks }
+      // Última red de seguridad: nunca publicar a una candidata que se haya
+      // anulado, aunque hubiera quedado seleccionada en el estado local.
+      const annulledIds = new Set(candidates.filter((c) => c.status === 'anulada').map((c) => c.id))
+      const cleanPicks = officialPicks.filter((id) => !annulledIds.has(id))
+      const cleanPodium = {
+        winner: annulledIds.has(podium.winner) ? '' : podium.winner,
+        first: annulledIds.has(podium.first) ? '' : podium.first,
+        second: annulledIds.has(podium.second) ? '' : podium.second,
+      }
+      const payload = phase.podium ? { podium: cleanPodium } : { officialPicks: cleanPicks }
       await publishPhaseResultsAndRecalculate(phase.key, payload)
       // Publicar resultados también cierra la fase: abre automáticamente la siguiente.
       await openNextPhase(phase.key)

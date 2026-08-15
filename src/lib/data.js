@@ -9,11 +9,12 @@ import {
   deleteDoc,
   getDocs,
   getDoc,
+  addDoc,
   writeBatch,
   serverTimestamp,
 } from 'firebase/firestore'
 import { db } from '../firebase'
-import { PHASES, PHASE_STATUS, getPhase, previousPhase, nextPhase } from './constants'
+import { PHASES, PHASE_STATUS, CANDIDATE_STATUS, getPhase, previousPhase, nextPhase } from './constants'
 import { scorePrediction, sumTotalPoints } from './scoring'
 
 // ---------- Candidatas ----------
@@ -42,6 +43,68 @@ export async function saveCandidate(candidateId, data, editor) {
 
 export async function deleteCandidate(candidateId) {
   await deleteDoc(doc(db, 'candidates', candidateId))
+}
+
+/**
+ * Anula/descalifica a una candidata a media competencia (fuera del corte
+ * normal de una fase — para eso está "Publicar resultados"). Dos efectos:
+ *
+ * 1. Su estado pasa a 'anulada': deja de aparecer disponible para elegir en
+ *    Predicciones ni en la selección de resultados oficiales del admin, en
+ *    cualquier fase de ahí en adelante.
+ * 2. Se la quita de las predicciones (picks o podio) ya guardadas por los
+ *    usuarios en fases que TODAVÍA NO se publican — le libera ese cupo a
+ *    cada usuario para que elija otra candidata. No cuenta como acierto ni
+ *    como fallo. Las fases ya publicadas no se tocan (el puntaje ya
+ *    otorgado con ella queda como está, no se recalcula retroactivamente).
+ *
+ * Devuelve cuántas predicciones se actualizaron.
+ */
+export async function annulCandidate(candidateId, editor) {
+  await updateDoc(doc(db, 'candidates', candidateId), {
+    status: CANDIDATE_STATUS.ANULADA,
+    lastEditedBy: editor?.uid || null,
+    lastEditedByName: editor?.name || null,
+    lastEditedAt: serverTimestamp(),
+  })
+
+  const [resultsSnap, predictionsSnap] = await Promise.all([
+    getDocs(collection(db, 'phaseResults')),
+    getDocs(collection(db, 'predictions')),
+  ])
+  const publishedPhaseKeys = new Set(resultsSnap.docs.map((d) => d.id))
+
+  const batch = writeBatch(db)
+  let touched = 0
+  predictionsSnap.docs.forEach((d) => {
+    const data = d.data()
+    if (publishedPhaseKeys.has(data.phase)) return // fase ya publicada: no se toca retroactivamente
+    const phase = getPhase(data.phase)
+    if (!phase) return
+
+    if (phase.podium) {
+      const podium = data.podium || {}
+      const patch = {}
+      for (const slot of ['winner', 'first', 'second']) {
+        if (podium[slot] === candidateId) patch[`podium.${slot}`] = ''
+      }
+      if (Object.keys(patch).length > 0) {
+        batch.update(d.ref, patch)
+        touched++
+      }
+    } else if (Array.isArray(data.picks) && data.picks.includes(candidateId)) {
+      batch.update(d.ref, { picks: data.picks.filter((id) => id !== candidateId) })
+      touched++
+    }
+  })
+  if (touched > 0) await batch.commit()
+  return touched
+}
+
+/** Reactiva una candidata anulada por error (los cupos que ya se liberaron
+ * en predicciones de otros usuarios no se restauran automáticamente). */
+export async function reactivateCandidate(candidateId, editor) {
+  await saveCandidate(candidateId, { status: CANDIDATE_STATUS.ACTIVE }, editor)
 }
 
 /**
@@ -187,15 +250,26 @@ async function getAllPredictionsForPhase(phaseKey) {
  * IDs de las candidatas que compiten en una fase (de entre las cuales el
  * admin elige quiénes avanzan). En Fase 1 son todas las activas; en las
  * siguientes, las que oficialmente avanzaron en la fase anterior.
+ *
+ * En ambos casos se excluyen las candidatas 'anulada': si una avanzó
+ * oficialmente en la fase previa pero luego se anuló a media competencia,
+ * no debe entrar aquí — si no, al publicar esta fase se marcaría como
+ * 'eliminated' (pisando su estado real de anulación).
  */
 async function getPhaseUniverseIds(phaseKey) {
   const prevPhase = previousPhase(phaseKey)
+  const candidatesSnap = await getDocs(collection(db, 'candidates'))
+  const annulledIds = new Set(
+    candidatesSnap.docs.filter((d) => d.data().status === CANDIDATE_STATUS.ANULADA).map((d) => d.id),
+  )
+
   if (!prevPhase) {
-    const snap = await getDocs(collection(db, 'candidates'))
-    return snap.docs.filter((d) => d.data().status !== 'eliminated').map((d) => d.id)
+    return candidatesSnap.docs
+      .filter((d) => d.data().status !== CANDIDATE_STATUS.ELIMINATED && !annulledIds.has(d.id))
+      .map((d) => d.id)
   }
   const prevResult = await getPhaseResults(prevPhase.key)
-  return prevResult?.officialPicks || []
+  return (prevResult?.officialPicks || []).filter((id) => !annulledIds.has(id))
 }
 
 function advancingIdsFromOfficialData(phase, officialData) {
@@ -313,4 +387,48 @@ export function listenUsers(callback) {
   return onSnapshot(collection(db, 'users'), (snap) => {
     callback(snap.docs.map((d) => ({ id: d.id, ...d.data() })))
   })
+}
+
+// ---------- Comentarios y reacciones (sección Candidatas) ----------
+
+export function listenCandidateComments(candidateId, callback) {
+  const q = query(collection(db, 'candidates', candidateId, 'comments'), orderBy('createdAt', 'desc'))
+  return onSnapshot(q, (snap) => {
+    callback(snap.docs.map((d) => ({ id: d.id, ...d.data() })))
+  })
+}
+
+export async function postCandidateComment(candidateId, text, author) {
+  const trimmed = text.trim()
+  if (!trimmed) return
+  await addDoc(collection(db, 'candidates', candidateId, 'comments'), {
+    userId: author.uid,
+    userName: author.name || 'Usuario',
+    text: trimmed.slice(0, 500),
+    createdAt: serverTimestamp(),
+  })
+}
+
+export async function deleteCandidateComment(candidateId, commentId) {
+  await deleteDoc(doc(db, 'candidates', candidateId, 'comments', commentId))
+}
+
+/** Un doc por usuario (id = uid): guarda su reacción actual a esa candidata. */
+export function listenCandidateReactions(candidateId, callback) {
+  return onSnapshot(collection(db, 'candidates', candidateId, 'reactions'), (snap) => {
+    callback(snap.docs.map((d) => ({ id: d.id, ...d.data() })))
+  })
+}
+
+/** Alterna la reacción del usuario: si ya tenía marcada esa misma, la quita;
+ * si tenía otra o ninguna, la cambia a `emojiKey`. Cada usuario solo puede
+ * tener una reacción activa por candidata. */
+export async function toggleMyReaction(candidateId, uid, emojiKey, userName) {
+  const ref = doc(db, 'candidates', candidateId, 'reactions', uid)
+  const snap = await getDoc(ref)
+  if (snap.exists() && snap.data().emojiKey === emojiKey) {
+    await deleteDoc(ref)
+    return
+  }
+  await setDoc(ref, { emojiKey, userName: userName || 'Usuario', updatedAt: serverTimestamp() })
 }
