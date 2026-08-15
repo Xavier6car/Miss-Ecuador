@@ -30,6 +30,9 @@ export default function Navbar() {
         <NavLink to="/ranking" className={({ isActive }) => `nav-link${isActive ? ' active' : ''}`}>
           Ranking
         </NavLink>
+        <NavLink to="/actividad" className={({ isActive }) => `nav-link${isActive ? ' active' : ''}`}>
+          Actividad
+        </NavLink>
         <NavLink to="/reglas" className={({ isActive }) => `nav-link${isActive ? ' active' : ''}`}>
           Reglas
         </NavLink>

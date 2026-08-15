@@ -10,6 +10,7 @@ import Candidates from './pages/Candidates'
 import Predictions from './pages/Predictions'
 import Ranking from './pages/Ranking'
 import Rules from './pages/Rules'
+import Activity from './pages/Activity'
 import AdminHome from './pages/admin/AdminHome'
 
 function AppLayout() {
@@ -29,6 +30,7 @@ function AppLayout() {
           <Route path="/candidatas" element={<Candidates />} />
           <Route path="/prediccion/:phaseKey" element={<Predictions />} />
           <Route path="/ranking" element={<Ranking />} />
+          <Route path="/actividad" element={<Activity />} />
           <Route path="/reglas" element={<Rules />} />
 
           <Route element={<RequireRole roles={['admin', 'colaborador']} />}>
