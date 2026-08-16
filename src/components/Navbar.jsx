@@ -27,6 +27,9 @@ export default function Navbar() {
         >
           Predicción
         </NavLink>
+        <NavLink to="/mis-predicciones" className={({ isActive }) => `nav-link${isActive ? ' active' : ''}`}>
+          Mis predicciones
+        </NavLink>
         <NavLink to="/ranking" className={({ isActive }) => `nav-link${isActive ? ' active' : ''}`}>
           Ranking
         </NavLink>

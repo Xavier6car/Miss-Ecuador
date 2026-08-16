@@ -40,6 +40,9 @@ export default function MobileMenu() {
                 Administración
               </NavLink>
             )}
+            <NavLink to="/mis-predicciones" className="mobile-menu-item" onClick={() => setOpen(false)}>
+              Mis predicciones
+            </NavLink>
             <NavLink to="/actividad" className="mobile-menu-item" onClick={() => setOpen(false)}>
               Actividad
             </NavLink>

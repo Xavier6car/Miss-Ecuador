@@ -8,6 +8,7 @@ import Home from './pages/Home'
 import Login from './pages/Login'
 import Candidates from './pages/Candidates'
 import Predictions from './pages/Predictions'
+import MyPredictions from './pages/MyPredictions'
 import Ranking from './pages/Ranking'
 import Rules from './pages/Rules'
 import Activity from './pages/Activity'
@@ -29,6 +30,7 @@ function AppLayout() {
           <Route path="/" element={<Home />} />
           <Route path="/candidatas" element={<Candidates />} />
           <Route path="/prediccion/:phaseKey" element={<Predictions />} />
+          <Route path="/mis-predicciones" element={<MyPredictions />} />
           <Route path="/ranking" element={<Ranking />} />
           <Route path="/actividad" element={<Activity />} />
           <Route path="/reglas" element={<Rules />} />
