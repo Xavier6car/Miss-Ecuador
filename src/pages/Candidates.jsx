@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { useSearchParams } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import {
   listenCandidates,
@@ -32,8 +33,28 @@ export default function Candidates({ embedded = false }) {
   const [viewing, setViewing] = useState(null)
   const [annullingId, setAnnullingId] = useState(null)
   const [annulMsg, setAnnulMsg] = useState('')
+  const [searchParams, setSearchParams] = useSearchParams()
 
   useEffect(() => listenCandidates(setCandidates), [])
+
+  // Soporta llegar directo a la ficha de una candidata por URL (?ver=id) —
+  // lo usa, por ejemplo, la pestaña "Actividad" al hacer click en un
+  // comentario/reacción para llevarte a esa candidata puntual.
+  useEffect(() => {
+    const verId = searchParams.get('ver')
+    if (!verId || candidates.length === 0) return
+    const c = candidates.find((x) => x.id === verId)
+    if (c) setViewing(c)
+  }, [searchParams, candidates])
+
+  function closeViewing() {
+    setViewing(null)
+    if (searchParams.has('ver')) {
+      const next = new URLSearchParams(searchParams)
+      next.delete('ver')
+      setSearchParams(next, { replace: true })
+    }
+  }
 
   const provinces = ['Todas', ...new Set(candidates.map((c) => c.province).filter(Boolean))]
   const q = search.trim().toLowerCase()
@@ -373,7 +394,7 @@ export default function Candidates({ embedded = false }) {
         <div className="alert alert-info">Ninguna candidata coincide con la búsqueda.</div>
       )}
 
-      {viewing && <CandidateModal candidate={viewing} onClose={() => setViewing(null)} showEngagement />}
+      {viewing && <CandidateModal candidate={viewing} onClose={closeViewing} showEngagement />}
     </div>
   )
 }
