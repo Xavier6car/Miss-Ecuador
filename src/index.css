@@ -1467,6 +1467,15 @@ th {
   padding: 10px 12px;
 }
 
+.comment-item.clickable {
+  cursor: pointer;
+  transition: border-color 0.15s;
+}
+
+.comment-item.clickable:hover {
+  border-color: var(--gold);
+}
+
 .comment-item-head {
   display: flex;
   align-items: center;

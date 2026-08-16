@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { listenCandidates, listenRecentComments, listenRecentReactions } from '../lib/data'
 import { REACTIONS } from '../lib/constants'
 
@@ -26,6 +27,7 @@ function millisOf(ts) {
  * todas las candidatas, más reciente primero. Visible para cualquier
  * jugador registrado. */
 export default function Activity() {
+  const navigate = useNavigate()
   const [candidates, setCandidates] = useState([])
   const [comments, setComments] = useState([])
   const [reactions, setReactions] = useState([])
@@ -72,23 +74,32 @@ export default function Activity() {
         )}
 
         <div className="comment-list" style={{ maxHeight: 'none' }}>
-          {feed.map((item) => (
-            <div className="comment-item" key={item.key}>
-              <div className="comment-item-head">
-                <span className="comment-author">{item.userName}</span>
-                <span className="text-dim" style={{ fontSize: 11 }}>{formatWhen(item.when)}</span>
+          {feed.map((item) => {
+            const candidateExists = candidatesById.has(item.candidateId)
+            return (
+              <div
+                className={`comment-item${candidateExists ? ' clickable' : ''}`}
+                key={item.key}
+                onClick={candidateExists ? () => navigate(`/candidatas?ver=${item.candidateId}`) : undefined}
+                role={candidateExists ? 'button' : undefined}
+                tabIndex={candidateExists ? 0 : undefined}
+              >
+                <div className="comment-item-head">
+                  <span className="comment-author">{item.userName}</span>
+                  <span className="text-dim" style={{ fontSize: 11 }}>{formatWhen(item.when)}</span>
+                </div>
+                {item.kind === 'comment' ? (
+                  <p className="comment-text">
+                    comentó en <strong>{candidateLabel(candidatesById, item.candidateId)}</strong>: “{item.text}”
+                  </p>
+                ) : (
+                  <p className="comment-text">
+                    reaccionó {item.emoji} a <strong>{candidateLabel(candidatesById, item.candidateId)}</strong>
+                  </p>
+                )}
               </div>
-              {item.kind === 'comment' ? (
-                <p className="comment-text">
-                  comentó en <strong>{candidateLabel(candidatesById, item.candidateId)}</strong>: “{item.text}”
-                </p>
-              ) : (
-                <p className="comment-text">
-                  reaccionó {item.emoji} a <strong>{candidateLabel(candidatesById, item.candidateId)}</strong>
-                </p>
-              )}
-            </div>
-          ))}
+            )
+          })}
         </div>
       </div>
     </div>
