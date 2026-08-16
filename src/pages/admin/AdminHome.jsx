@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { useAuth } from '../../context/AuthContext'
 import Candidates from '../Candidates'
 import AdminPhases from './AdminPhases'
+import AdminPredictions from './AdminPredictions'
 import AdminRoles from './AdminRoles'
 
 export default function AdminHome() {
@@ -24,6 +25,9 @@ export default function AdminHome() {
             <button className={`tab${tab === 'fases' ? ' active' : ''}`} onClick={() => setTab('fases')}>
               Fases y resultados
             </button>
+            <button className={`tab${tab === 'predicciones' ? ' active' : ''}`} onClick={() => setTab('predicciones')}>
+              Predicciones
+            </button>
             <button className={`tab${tab === 'roles' ? ' active' : ''}`} onClick={() => setTab('roles')}>
               Roles
             </button>
@@ -33,6 +37,7 @@ export default function AdminHome() {
 
       {tab === 'candidatas' && <Candidates embedded />}
       {tab === 'fases' && isAdmin && <AdminPhases />}
+      {tab === 'predicciones' && isAdmin && <AdminPredictions />}
       {tab === 'roles' && isAdmin && <AdminRoles />}
     </div>
   )

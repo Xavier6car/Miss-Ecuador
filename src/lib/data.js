@@ -246,6 +246,17 @@ async function getAllPredictionsForPhase(phaseKey) {
     .filter((p) => p.phase === phaseKey)
 }
 
+/**
+ * Todas las predicciones de todos los usuarios, en todas las fases —
+ * registro en tiempo real de quién eligió qué (panel de admin "Predicciones").
+ * Solo admin puede leer esto: ver la regla de `predictions` en firestore.rules.
+ */
+export function listenAllPredictions(callback) {
+  return onSnapshot(collection(db, 'predictions'), (snap) => {
+    callback(snap.docs.map((d) => ({ id: d.id, ...d.data() })))
+  })
+}
+
 // ---------- Publicar resultados + recalcular puntos (solo admin) ----------
 
 /**
