@@ -48,17 +48,26 @@ export function CandidateCard({ candidate, showStatus, onClick }) {
 /** Tarjeta de la página "Predicción" — seleccionable, con check/asignación.
  * Un tap en la tarjeta selecciona/deselecciona directamente. Si se pasa
  * `onExpand`, aparece además un botón de "ampliar" que abre la vista grande
- * (con navegación entre todas las candidatas) sin afectar la selección. */
-export function PoolCard({ candidate, selected, disabled, assignedLabel, onClick, onExpand }) {
+ * (con navegación entre todas las candidatas) sin afectar la selección.
+ *
+ * `readOnly` la deja como pura foto de repaso (sin cursor de click ni
+ * atenuarla) — se usa para mostrar, con la fase ya cerrada, lo que el
+ * usuario eligió. `statusTag` ('eliminated' | 'annulled') se combina con
+ * `readOnly` para avisar si esa candidata ya no sigue en competencia. */
+export function PoolCard({ candidate, selected, disabled, readOnly, assignedLabel, statusTag, onClick, onExpand }) {
+  const interactive = !disabled && !readOnly && Boolean(onClick)
   return (
     <div
-      className={`pool-card${disabled ? ' disabled' : ''}`}
-      onClick={disabled ? undefined : onClick}
-      role={disabled ? undefined : 'button'}
-      tabIndex={disabled ? undefined : 0}
+      className={`pool-card${disabled || readOnly ? ' disabled' : ''}`}
+      onClick={interactive ? onClick : undefined}
+      role={interactive ? 'button' : undefined}
+      tabIndex={interactive ? 0 : undefined}
       style={{ opacity: disabled ? 0.45 : 1 }}
     >
-      <div className={`pool-photo-wrap${selected ? ' selected' : ''}`}>
+      <div
+        className={`pool-photo-wrap${selected ? ' selected' : ''}`}
+        style={statusTag ? { filter: 'grayscale(0.85) brightness(0.7)' } : undefined}
+      >
         <PhotoOrPlaceholder candidate={candidate} className="candidate-photo" />
         <span className="pool-number-badge">{candidate.number ?? '-'}</span>
         {onExpand && (
@@ -79,7 +88,7 @@ export function PoolCard({ candidate, selected, disabled, assignedLabel, onClick
             </svg>
           </button>
         )}
-        {selected && !assignedLabel && (
+        {selected && !assignedLabel && !statusTag && (
           <>
             <div className="pool-selected-ring" />
             <span className="pool-check">
@@ -89,7 +98,9 @@ export function PoolCard({ candidate, selected, disabled, assignedLabel, onClick
             </span>
           </>
         )}
-        {assignedLabel && <span className="pool-assigned-label">{assignedLabel}</span>}
+        {assignedLabel && !statusTag && <span className="pool-assigned-label">{assignedLabel}</span>}
+        {statusTag === 'eliminated' && <span className="candidate-status-tag eliminated">Eliminada</span>}
+        {statusTag === 'annulled' && <span className="candidate-status-tag annulled">Anulada</span>}
       </div>
       <div className="pool-name">{candidate.name}</div>
       <div className="pool-province">{candidate.province}</div>

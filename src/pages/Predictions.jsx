@@ -93,6 +93,23 @@ export default function Predictions() {
 
   const blockedByPrevPhase = prevPhase && !prevResults
 
+  const candidatesById = useMemo(() => new Map(candidates.map((c) => [c.id, c])), [candidates])
+
+  // Con la fase cerrada ya no importa el "universo" elegible (que excluye a
+  // las eliminadas) — hay que poder seguir mostrando la foto de lo que se
+  // eligió aunque esa candidata ya no haya avanzado. Se arma leyendo directo
+  // de `candidates` (no de `universe`), así el repaso queda completo.
+  const pickedCandidates = useMemo(() => {
+    if (phase.podium) return []
+    return picks.map((id) => candidatesById.get(id)).filter(Boolean)
+  }, [picks, candidatesById, phase.podium])
+
+  // Para la fase de podio, la asignación se hace en el grid de abajo (que
+  // solo aparece con la fase abierta) — por eso ese caso sigue mirando
+  // `universe` como antes; el repaso de fotos post-cierre lo cubre
+  // `podium-row`, arriba, que no depende de esta lista.
+  const displayList = isLocked && !phase.podium ? pickedCandidates : universe
+
   function togglePick(id) {
     if (isLocked) return
     setPicks((current) => {
@@ -120,7 +137,7 @@ export default function Predictions() {
   }
 
   function openViewer(id) {
-    const idx = universe.findIndex((c) => c.id === id)
+    const idx = displayList.findIndex((c) => c.id === id)
     if (idx >= 0) setViewingIndex(idx)
   }
 
@@ -129,14 +146,14 @@ export default function Predictions() {
   }
 
   function showPrevCandidate() {
-    setViewingIndex((i) => (i === null || universe.length === 0 ? i : (i - 1 + universe.length) % universe.length))
+    setViewingIndex((i) => (i === null || displayList.length === 0 ? i : (i - 1 + displayList.length) % displayList.length))
   }
 
   function showNextCandidate() {
-    setViewingIndex((i) => (i === null || universe.length === 0 ? i : (i + 1) % universe.length))
+    setViewingIndex((i) => (i === null || displayList.length === 0 ? i : (i + 1) % displayList.length))
   }
 
-  const viewingCandidate = viewingIndex !== null ? universe[viewingIndex] : null
+  const viewingCandidate = viewingIndex !== null ? displayList[viewingIndex] : null
 
   async function handleSubmit() {
     setMessage('')
@@ -165,7 +182,7 @@ export default function Predictions() {
     ? (PODIUM_ORDER.filter((k) => podium[k]).length / 3) * 100
     : Math.min(100, (picks.length / phase.pickCount) * 100)
 
-  const candidateById = (id) => universe.find((c) => c.id === id)
+  const candidateById = (id) => candidatesById.get(id)
 
   return (
     <div className="container">
@@ -213,26 +230,28 @@ export default function Predictions() {
         </span>
       </div>
 
-      {isLocked ? (
-        <div className="locked-block">
-          <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="rgba(245,239,230,0.6)" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
-            <rect x="3" y="11" width="18" height="11" rx="2" />
-            <path d="M7 11V7a5 5 0 0 1 10 0v4" />
-          </svg>
-          <div className="locked-block-title">Predicciones cerradas</div>
-          <div className="locked-block-body">
-            {status === PHASE_STATUS.PUBLICADA
-              ? 'Los resultados de esta fase ya se publicaron.'
-              : `El plazo para ${phase.label} venció. Tu predicción quedó registrada y se calificará con los resultados oficiales.`}
-          </div>
-        </div>
-      ) : blockedByPrevPhase ? (
+      {blockedByPrevPhase ? (
         <div className="alert alert-info" style={{ marginTop: 16 }}>
           Esta fase se habilita cuando el admin publique los resultados oficiales de {prevPhase.label}.
         </div>
       ) : (
         <>
-          {!phase.podium && (
+          {isLocked && (
+            <div className="locked-block" style={{ marginBottom: 20 }}>
+              <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="rgba(245,239,230,0.6)" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
+                <rect x="3" y="11" width="18" height="11" rx="2" />
+                <path d="M7 11V7a5 5 0 0 1 10 0v4" />
+              </svg>
+              <div className="locked-block-title">Predicciones cerradas</div>
+              <div className="locked-block-body">
+                {status === PHASE_STATUS.PUBLICADA
+                  ? 'Los resultados de esta fase ya se publicaron. Así quedó registrada tu predicción:'
+                  : `El plazo para ${phase.label} venció. Así quedó registrada tu predicción, se calificará con los resultados oficiales:`}
+              </div>
+            </div>
+          )}
+
+          {!isLocked && !phase.podium && (
             <div className="flex" style={{ alignItems: 'center', gap: 12, marginBottom: 4 }}>
               <div style={{ fontSize: 14 }}>
                 Llevas <strong style={{ color: 'var(--gold)' }}>{picks.length}/{phase.pickCount}</strong>
@@ -246,49 +265,68 @@ export default function Predictions() {
           {phase.podium && (
             <>
               <div className="podium-row">
-                <PodiumSlot slotKey="first" podium={podium} candidateById={candidateById} onClear={clearSlot} />
-                <PodiumSlot slotKey="winner" podium={podium} candidateById={candidateById} onClear={clearSlot} />
-                <PodiumSlot slotKey="second" podium={podium} candidateById={candidateById} onClear={clearSlot} />
+                <PodiumSlot slotKey="first" podium={podium} candidateById={candidateById} onClear={clearSlot} locked={isLocked} />
+                <PodiumSlot slotKey="winner" podium={podium} candidateById={candidateById} onClear={clearSlot} locked={isLocked} />
+                <PodiumSlot slotKey="second" podium={podium} candidateById={candidateById} onClear={clearSlot} locked={isLocked} />
               </div>
-              <p className="podium-hint">
-                Toca una candidata para asignarla al siguiente lugar libre. Toca un lugar lleno para vaciarlo.
-              </p>
+              {!isLocked && (
+                <p className="podium-hint">
+                  Toca una candidata para asignarla al siguiente lugar libre. Toca un lugar lleno para vaciarlo.
+                </p>
+              )}
+              {isLocked && !prediction && (
+                <div className="alert alert-info" style={{ marginTop: 16 }}>
+                  No enviaste ninguna predicción para esta fase.
+                </div>
+              )}
+              {!isLocked && (
+                <div className="grid candidates-grid" style={{ marginTop: 20 }}>
+                  {universe.map((c) => {
+                    const slot = PODIUM_ORDER.find((k) => podium[k] === c.id)
+                    return (
+                      <PoolCard
+                        key={c.id}
+                        candidate={c}
+                        selected={Boolean(slot)}
+                        assignedLabel={slot ? PODIUM_LABELS[slot] : null}
+                        onClick={() => assignNext(c.id)}
+                        onExpand={() => openViewer(c.id)}
+                      />
+                    )
+                  })}
+                </div>
+              )}
             </>
           )}
 
-          <div className="grid candidates-grid" style={{ marginTop: 20 }}>
-            {universe.map((c) => {
-              if (phase.podium) {
-                const slot = PODIUM_ORDER.find((k) => podium[k] === c.id)
-                return (
-                  <PoolCard
-                    key={c.id}
-                    candidate={c}
-                    selected={Boolean(slot)}
-                    assignedLabel={slot ? PODIUM_LABELS[slot] : null}
-                    onClick={() => assignNext(c.id)}
-                    onExpand={() => openViewer(c.id)}
-                  />
-                )
-              }
-              const selected = picks.includes(c.id)
-              const disabled = !selected && picks.length >= phase.pickCount
-              return (
-                <PoolCard
-                  key={c.id}
-                  candidate={c}
-                  selected={selected}
-                  disabled={disabled}
-                  onClick={() => togglePick(c.id)}
-                  onExpand={() => openViewer(c.id)}
-                />
-              )
-            })}
-          </div>
-          {universe.length === 0 && (
-            <div className="alert alert-info" style={{ marginTop: 16 }}>
-              Aún no hay candidatas disponibles para esta fase.
-            </div>
+          {!phase.podium && (
+            <>
+              <div className="grid candidates-grid" style={{ marginTop: 20 }}>
+                {displayList.map((c) => {
+                  const selected = picks.includes(c.id)
+                  const statusTag = c.status === 'eliminated' ? 'eliminated' : c.status === 'anulada' ? 'annulled' : null
+                  return (
+                    <PoolCard
+                      key={c.id}
+                      candidate={c}
+                      selected={selected}
+                      readOnly={isLocked}
+                      statusTag={isLocked ? statusTag : null}
+                      disabled={!isLocked && !selected && picks.length >= phase.pickCount}
+                      onClick={isLocked ? undefined : () => togglePick(c.id)}
+                      onExpand={() => openViewer(c.id)}
+                    />
+                  )
+                })}
+              </div>
+              {displayList.length === 0 && (
+                <div className="alert alert-info" style={{ marginTop: 16 }}>
+                  {isLocked
+                    ? 'No enviaste ninguna predicción para esta fase.'
+                    : 'Aún no hay candidatas disponibles para esta fase.'}
+                </div>
+              )}
+            </>
           )}
         </>
       )}
@@ -296,7 +334,7 @@ export default function Predictions() {
       {viewingCandidate && (
         <CandidateModal
           candidate={viewingCandidate}
-          total={universe.length}
+          total={displayList.length}
           index={viewingIndex}
           onPrev={showPrevCandidate}
           onNext={showNextCandidate}
@@ -343,21 +381,40 @@ export default function Predictions() {
   )
 }
 
-function PodiumSlot({ slotKey, podium, candidateById, onClear }) {
+function PodiumSlot({ slotKey, podium, candidateById, onClear, locked }) {
   const isWinner = slotKey === 'winner'
   const candidate = candidateById(podium[slotKey])
   const size = isWinner ? 68 : 56
+  const notAdvancing = candidate?.status === 'eliminated' || candidate?.status === 'anulada'
   return (
     <div
       className={`podium-slot${candidate ? ' filled' : ''}`}
       style={{ width: isWinner ? 128 : 108 }}
-      onClick={candidate ? () => onClear(slotKey) : undefined}
+      onClick={candidate && !locked ? () => onClear(slotKey) : undefined}
     >
       <div className={`podium-slot-label${isWinner ? ' winner' : ''}`}>{PODIUM_LABELS[slotKey]}</div>
-      <div className={`podium-avatar${candidate ? ' filled' : ''}`} style={{ width: size, height: size, fontSize: isWinner ? 22 : 18 }}>
-        {candidate ? initials(candidate.name) : ''}
+      <div
+        className={`podium-avatar${candidate ? ' filled' : ''}`}
+        style={{
+          width: size,
+          height: size,
+          fontSize: isWinner ? 22 : 18,
+          backgroundImage: candidate?.photoUrl ? `url(${candidate.photoUrl})` : undefined,
+          backgroundSize: 'cover',
+          backgroundPosition: 'center',
+          filter: notAdvancing ? 'grayscale(0.85) brightness(0.7)' : undefined,
+        }}
+      >
+        {candidate && !candidate.photoUrl ? initials(candidate.name) : ''}
       </div>
-      <div className="podium-slot-name">{candidate ? candidate.name : `Elige ${PODIUM_LABELS[slotKey]}`}</div>
+      <div className="podium-slot-name">
+        {candidate ? candidate.name : locked ? '—' : `Elige ${PODIUM_LABELS[slotKey]}`}
+      </div>
+      {notAdvancing && (
+        <div style={{ fontSize: 10, color: 'var(--danger-text)', marginTop: 2 }}>
+          {candidate.status === 'eliminated' ? 'Eliminada' : 'Anulada'}
+        </div>
+      )}
       <div className={`podium-pedestal${isWinner ? ' winner' : ''}`} style={{ height: isWinner ? 78 : slotKey === 'first' ? 56 : 40 }}>
         {isWinner ? (
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#dcae66" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
